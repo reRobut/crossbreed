@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mendel Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════ HOME SCREEN ═══════════ -->
+<div class="home-overlay" id="home-overlay">
+  <div class="home-bg-deco"></div>
+  <div class="home-content">
+    <div class="home-title-wrap">
+      <div class="home-pea">🫛</div>
+      <div class="home-title-zh" style="margin-top: 60px">孟德尔模拟器</div>
+      <div class="home-title-en">Mendel simulator</div>
+      <div class="home-subtitle-zh">花卉杂交</div>
+      <div class="home-subtitle-en">Flower Crossbreeding</div>
+    </div>
+    <div class="home-actions">
+      <button class="home-btn" id="home-start-btn" onclick="homeStart()">开始游戏</button>
+      <button class="home-btn" id="home-continue-btn" onclick="homeContinue()">继续游戏</button>
+      <button class="home-lang-toggle" onclick="toggleHomeLang()">
+        <span id="home-lang-label">EN / 中文</span>
+      </button>
+    </div>
+    <div class="home-version">Demo v0.1 by 纯一星鸣</div>
+  </div>
+</div>
+
+<!-- ═══════════ TOPBAR ═══════════ -->
+<div class="topbar">
+  <nav class="tabs">
+    <button class="tab active" data-tab="shop"    onclick="switchTab('shop',this)">商店</button>
+    <button class="tab" data-tab="nursery" onclick="switchTab('nursery',this)">苗圃</button>
+    <button class="tab" data-tab="storage" onclick="switchTab('storage',this)">仓库</button>
+    <button class="tab" data-tab="catalog" onclick="switchTab('catalog',this)">图鉴</button>
+    <button class="tab" data-tab="hints"   onclick="switchTab('hints',this)">提示</button>
+  </nav>
+  <div class="topbar-right">
+    <div class="gold-display">
+      <div class="gold-coin"></div>
+      <span id="gold-amount">100</span>
+    </div>
+    <button class="topbar-icon-btn" onclick="saveGame()" title="保存">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 2h9l3 3v13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/>
+        <rect x="6" y="2" width="6" height="5" rx=".5"/>
+        <rect x="5" y="11" width="10" height="6" rx=".5"/>
+      </svg>
+    </button>
+    <button class="topbar-icon-btn topbar-lang-btn" onclick="toggleLang()" id="topbar-lang-btn" title="语言">EN</button>
+  </div>
+</div>
+
+<!-- ═══════════ PAGES ═══════════ -->
+
+<!-- SHOP -->
+<div class="page active" id="page-shop">
+  <div class="shop-wrap">
+
+    <!-- UPGRADES SECTION -->
+    <div class="shop-section">
+      <div class="shop-section-title" id="shop-upgrades-label">升级</div>
+      <div class="shop-upgrade-row" id="shop-upgrade-nursery">
+        <div class="upgrade-info">
+          <div class="upgrade-name" id="upgrade-nursery-name">苗圃加速</div>
+          <div class="upgrade-desc" id="upgrade-nursery-desc">生长时间减半</div>
+        </div>
+        <button class="shop-buy-btn" id="upgrade-nursery-btn" onclick="buyUpgrade('nursery')">
+          <span class="shop-coin"></span><span id="upgrade-nursery-price">2,500</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="shop-divider"></div>
+
+    <!-- BLIND BOXES SECTION -->
+    <div class="shop-section">
+      <div class="shop-section-title" id="shop-boxes-label">种子盲盒</div>
+      <div class="shop-boxes-grid">
+
+        <!-- BASIC (初级) — deep green -->
+        <div class="box-card basic-box" id="box-bronze">
+          <div class="box-name" id="box-bronze-name">初级盲盒</div>
+          <div class="box-price-row">
+            <span class="shop-coin"></span>
+            <span class="box-price" id="box-bronze-price">50</span>
+          </div>
+          <div class="box-odds" id="box-bronze-odds">
+            <div class="odds-row"><span class="odds-bar bar-1" style="width:80%"></span><span class="odds-label" id="bronze-odds-1">1-2隐性基因 80%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-2" style="width:20%"></span><span class="odds-label" id="bronze-odds-2">3个隐性基因 20%</span></div>
+          </div>
+          <button class="box-buy-btn" onclick="buyBox('bronze')" id="box-bronze-btn">
+            <span id="box-bronze-btn-label">购买</span>
+          </button>
+        </div>
+
+        <!-- MID (中级) — blue -->
+        <div class="box-card mid-box locked" id="box-silver">
+          <div class="box-name" id="box-silver-name">中级盲盒</div>
+          <div class="box-price-row">
+            <span class="shop-coin"></span>
+            <span class="box-price" id="box-silver-price">350</span>
+          </div>
+          <div class="box-odds" id="box-silver-odds">
+            <div class="odds-row"><span class="odds-bar bar-1" style="width:70%"></span><span class="odds-label" id="silver-odds-1">3个隐性基因 70%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-2" style="width:25%"></span><span class="odds-label" id="silver-odds-2">4个隐性基因 25%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-3" style="width:5%"></span><span class="odds-label" id="silver-odds-3">5个隐性基因 5%</span></div>
+          </div>
+
+          <div class="odds-label" id="box-silver-lock">解锁20种花后开放</div>
+          <button class="box-buy-btn" onclick="buyBox('silver')" id="box-silver-btn" disabled>
+            <span id="box-silver-btn-label">购买</span>
+          </button>
+        </div>
+
+        <!-- ADVANCED (高级) — light green -->
+        <div class="box-card adv-box locked" id="box-gold">
+          <div class="box-name" id="box-gold-name">高级盲盒</div>
+          <div class="box-price-row">
+            <span class="shop-coin"></span>
+            <span class="box-price" id="box-gold-price">1,200</span>
+          </div>
+          <div class="box-odds" id="box-gold-odds">
+            <div class="odds-row"><span class="odds-bar bar-1" style="width:60%"></span><span class="odds-label" id="gold-odds-1">5个隐性基因 60%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-2" style="width:35%"></span><span class="odds-label" id="gold-odds-2">6-7个隐性基因 35%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-3" style="width:5%"></span><span class="odds-label" id="gold-odds-3">8个隐性基因 5%</span></div>
+          </div>
+          <div class="odds-label" id="box-gold-lock">解锁50种花后开放</div>
+          <button class="box-buy-btn" onclick="buyBox('gold')" id="box-gold-btn" disabled>
+            <span id="box-gold-btn-label">购买</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NURSERY -->
+<div class="page" id="page-nursery">
+  <div class="nursery-plots-wrap">
+    <div class="nursery-plots-grid" id="plots-grid"></div>
+  </div>
+  <!-- SEED BAR -->
+  <div class="seed-bar">
+    <div class="seed-bar-header">
+      <span class="seed-bar-title" id="seed-bar-title-label">种子栏</span>
+      <span class="seed-bar-count" id="seed-total-label"></span>
+    </div>
+    <div class="seed-bar-scroll" id="seed-bar-scroll"></div>
+  </div>
+</div>
+
+<!-- STORAGE placeholder -->
+<div class="page" id="page-storage">
+  <!-- TOOLBAR -->
+  <div class="storage-toolbar">
+    <span class="storage-count-label" id="storage-count-label"></span>
+    <button class="storage-sell-all-btn" id="storage-sell-all-btn" onclick="sellAll()" disabled>全部出售</button>
+  </div>
+
+  <!-- MAIN FLOWER GRID -->
+  <div class="storage-main" id="storage-main">
+    <div class="storage-grid" id="storage-grid"></div>
+    <div class="storage-empty" id="storage-empty" style="display:none">
+      <div id="storage-empty-label">仓库空空如也</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:6px;font-style:italic;" id="storage-empty-sub">收获苗圃中的花卉加入仓库</div>
+    </div>
+  </div>
+
+  <!-- FAVORITES STRIP -->
+  <div class="fav-strip">
+    <div class="fav-strip-header">
+      <span class="fav-strip-title" id="fav-title-label">收藏</span>
+      <span class="fav-strip-count" id="fav-count-label"></span>
+    </div>
+    <div class="fav-strip-scroll" id="fav-strip-scroll">
+      <span class="fav-empty" id="fav-empty-label">暂无收藏</span>
+    </div>
+  </div>
+</div>
+
+<!-- CATALOG placeholder -->
+<div class="page" id="page-catalog">
+  <div class="catalog-header">
+    <span class="catalog-discovered" id="catalog-discovered-label"></span>
+  </div>
+  <div class="catalog-wrap">
+    <div class="catalog-table" id="catalog-table"></div>
+  </div>
+</div>
+
+<!-- HINTS PAGE -->
+<div class="page" id="page-hints">
+  <div class="hints-header">
+    <span class="hints-total" id="hints-total-label"></span>
+  </div>
+  <div class="hints-list" id="hints-list">
+    <div class="hint-empty">每解锁5种花获得一条提示</div>
+  </div>
+</div>
+
+<!-- BREED CONFIRM POPUP -->
+<div class="popup-overlay" id="breed-popup">
+  <div class="popup">
+    <div class="popup-title" id="popup-title">确认配种</div>
+    <div class="popup-parents" id="popup-parents"></div>
+    <div class="popup-body" id="popup-body">配种后将随机产生 3–5 颗种子，加入种子栏。</div>
+    <div class="breed-predictions" id="breed-predictions"></div>
+    <div class="popup-actions">
+      <button class="popup-btn" id="popup-cancel-btn" onclick="closeBreedPopup()">取消</button>
+      <button class="popup-btn confirm" onclick="confirmBreed()" id="popup-confirm-btn">配种</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLTIP -->
+<div class="tooltip" id="tooltip">
+  <div id="tooltip-content"></div>
+</div>
+
+<script src="svg.js"></script>
+<script src="sound.js"></script>
+<script src="function.js"></script>
+
+</body>
+</html>
