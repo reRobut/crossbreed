@@ -150,7 +150,13 @@
   <div class="seed-bar">
     <div class="seed-bar-header">
       <span class="seed-bar-title" id="seed-bar-title-label">种子栏</span>
-      <span class="seed-bar-count" id="seed-total-label"></span>
+      <div class="seed-bar-header-right">
+        <span class="seed-bar-count" id="seed-total-label"></span>
+        <div class="seed-sell-btns" id="seed-sell-btns" style="display:none;">
+          <button class="seed-sell-btn" id="seed-sell-one-btn" onclick="sellSelectedSeedOne()"></button>
+          <button class="seed-sell-btn" id="seed-sell-all-btn" onclick="sellSelectedSeedAll()"></button>
+        </div>
+      </div>
     </div>
     <div class="seed-bar-scroll" id="seed-bar-scroll"></div>
   </div>

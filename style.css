@@ -163,6 +163,17 @@ body {
 /* ═══ SEED BAR ═══ */
 .seed-bar { height: var(--seed-bar-h); background: var(--bg2); border-top: 1px solid var(--border); display: flex; flex-direction: column; }
 .seed-bar-header { padding: 8px 32px 4px; display: flex; align-items: center; justify-content: space-between; }
+.seed-bar-header-right { display: flex; align-items: center; gap: 10px; }
+.seed-sell-btns { display: flex; gap: 5px; }
+.seed-sell-btn {
+  padding: 2px 9px; border: 1px solid var(--border2);
+  background: none; color: var(--gold2);
+  font-family: 'EB Garamond', serif; font-size: 12px;
+  cursor: pointer; letter-spacing: .03em;
+  transition: background .15s, color .15s, border-color .15s;
+  white-space: nowrap;
+}
+.seed-sell-btn:hover { background: var(--gold); color: var(--bg); border-color: var(--gold); }
 .seed-bar-title { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-dim); }
 .seed-bar-count { font-size: 12px; color: var(--muted); }
 .seed-bar-scroll { flex: 1; overflow-x: auto; padding: 0 32px 8px; display: flex; align-items: center; gap: 8px; }

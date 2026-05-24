@@ -353,6 +353,7 @@ function renderSeedBar() {
     hint.textContent = lang==='zh' ? '← 选择种子，点击空槽种植' : '← Select seed, click empty plot';
     scroll.appendChild(hint);
   }
+  updateSeedSellBtns();
 }
 
 function updateGoldDisplay() {
@@ -369,6 +370,62 @@ function selectSeedGroup(genoKey) {
   document.querySelectorAll('.seed-chip').forEach(chip => {
     chip.classList.toggle('selected', chip.dataset.genoKey === selectedSeedGenoKey);
   });
+  updateSeedSellBtns();
+}
+
+function seedSellPrice(geno) {
+  const cp = colorPhenotype(geno);
+  const fp = flowerPhenotype(geno);
+  return Math.max(1, Math.floor(sellValue(cp, fp) * 0.5));
+}
+
+function updateSeedSellBtns() {
+  const btns = document.getElementById('seed-sell-btns');
+  const oneBtn = document.getElementById('seed-sell-one-btn');
+  const allBtn = document.getElementById('seed-sell-all-btn');
+  if (!btns) return;
+  if (!selectedSeedGenoKey) { btns.style.display = 'none'; return; }
+  const group = seeds.filter(s => genoStr(s.geno) === selectedSeedGenoKey);
+  if (group.length === 0) { btns.style.display = 'none'; return; }
+  const price = seedSellPrice(group[0].geno);
+  const totalPrice = price * group.length;
+  btns.style.display = 'flex';
+  oneBtn.textContent = lang === 'zh' ? `卖1颗 +${price}` : `Sell 1 +${price}`;
+  allBtn.textContent = lang === 'zh' ? `全卖 +${totalPrice}` : `Sell all +${totalPrice}`;
+}
+
+function sellSelectedSeedOne() {
+  if (!selectedSeedGenoKey) return;
+  const idx = seeds.findIndex(s => genoStr(s.geno) === selectedSeedGenoKey);
+  if (idx === -1) return;
+  const price = seedSellPrice(seeds[idx].geno);
+  seeds.splice(idx, 1);
+  gold += price;
+  updateGoldDisplay();
+  updateShopState();
+  if (typeof SFX !== 'undefined') SFX.gold();
+  showGoldToast('+' + price);
+  // deselect if none left
+  if (!seeds.some(s => genoStr(s.geno) === selectedSeedGenoKey)) selectedSeedGenoKey = null;
+  renderSeedBar();
+  updateSeedSellBtns();
+}
+
+function sellSelectedSeedAll() {
+  if (!selectedSeedGenoKey) return;
+  const toSell = seeds.filter(s => genoStr(s.geno) === selectedSeedGenoKey);
+  if (toSell.length === 0) return;
+  const price = seedSellPrice(toSell[0].geno);
+  const total = price * toSell.length;
+  seeds = seeds.filter(s => genoStr(s.geno) !== selectedSeedGenoKey);
+  gold += total;
+  selectedSeedGenoKey = null;
+  updateGoldDisplay();
+  updateShopState();
+  if (typeof SFX !== 'undefined') SFX.gold();
+  showGoldToast('+' + total);
+  renderSeedBar();
+  updateSeedSellBtns();
 }
 
 // Plant on empty plot
