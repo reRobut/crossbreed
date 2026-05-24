@@ -208,10 +208,12 @@
 <!-- BREED CONFIRM POPUP -->
 <div class="popup-overlay" id="breed-popup">
   <div class="popup">
-    <div class="popup-title" id="popup-title">确认配种</div>
-    <div class="popup-parents" id="popup-parents"></div>
-    <div class="popup-body" id="popup-body">配种后将随机产生 3–5 颗种子，加入种子栏。</div>
-    <div class="breed-predictions" id="breed-predictions"></div>
+    <div class="popup-scroll">
+      <div class="popup-title" id="popup-title">确认配种</div>
+      <div class="popup-parents" id="popup-parents"></div>
+      <div class="popup-body" id="popup-body">配种后将随机产生 3–5 颗种子，加入种子栏。</div>
+      <div class="breed-predictions" id="breed-predictions"></div>
+    </div>
     <div class="popup-actions">
       <button class="popup-btn" id="popup-cancel-btn" onclick="closeBreedPopup()">取消</button>
       <button class="popup-btn confirm" onclick="confirmBreed()" id="popup-confirm-btn">配种</button>
