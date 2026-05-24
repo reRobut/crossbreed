@@ -1,5 +1,7 @@
-3种难度：
-easy:I don't know much about mendel's rules of genetics. I need detailed guidance and help. 显示基因，在配种时显示概率预测
+方案 D — 镭射彩虹动画（最炫）
+用 hue-rotate CSS 动画：filter: hue-rotate(0deg) → hue-rotate(360deg) 循环，花朵颜色会持续变换色相，传说稀有度的花可以专用。
+
+
 [ 父本：X色蔷薇 ]  x  [ 母本：X色水仙 ]
                        │
                        ▼
@@ -8,8 +10,7 @@ XX (75%)
 XX (18.75%)
 ？？？ (6.25%) 
 已经发现的显示名字，还未发现的显示？？？
-learner: I am familiar with mendel's rules of genetics. 显示基因，比如黄色水仙(A_b_c_, D_e_f_)
-expert: I am expert of genetics. I can find out everything based on obeservation all by myself。不显示概率预测，也不显示基因。
+
 
 红A、黄B、蓝Y和白（隐性基因a/b/c）：
 - A_b_c_ 红色【史诗】
