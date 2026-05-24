@@ -1,13 +1,10 @@
 1. 右上角语言切换标签不随当前语言变化，就写EN
 
 function svgRose(p, c, d, stem) {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 491.279 491.279" width="100%" height="100%"><g>
-	<g id="Capa_1_4_">
-		<g>
-        </g>
-	</g>
-</g></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 491.279 491.279" width="100%" height="100%">
+  </svg>`;
 }
+
 
 
 方案 D — 镭射彩虹动画（最炫）
