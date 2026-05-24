@@ -6,6 +6,47 @@
 <title>Mendel Simulator</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css">
+
+<style>
+/* ── Mobile topbar fix ── */
+@media (max-width: 600px) {
+  .topbar {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    padding: 0 6px;
+    gap: 4px;
+  }
+  .tabs {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    display: flex;
+    flex-shrink: 1;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .topbar-right {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .topbar-lang-btn {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+  .gold-display span {
+    font-size: 12px;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -33,7 +74,7 @@
 
 <!-- ═══════════ TOPBAR ═══════════ -->
 <div class="topbar">
-  <nav class="tabs">
+  <nav class="tabs" style="overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
     <button class="tab active" data-tab="shop"    onclick="switchTab('shop',this)">商店</button>
     <button class="tab" data-tab="nursery" onclick="switchTab('nursery',this)">苗圃</button>
     <button class="tab" data-tab="storage" onclick="switchTab('storage',this)">仓库</button>
@@ -91,8 +132,8 @@
             <span class="box-price" id="box-bronze-price">50</span>
           </div>
           <div class="box-odds" id="box-bronze-odds">
-            <div class="odds-row"><span class="odds-bar bar-1" style="width:80%"></span><span class="odds-label" id="bronze-odds-1">1-2隐性基因 80%</span></div>
-            <div class="odds-row"><span class="odds-bar bar-2" style="width:20%"></span><span class="odds-label" id="bronze-odds-2">3个隐性基因 20%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-1" style="width:80%"></span><span class="odds-label" id="bronze-odds-1">1-2个隐性等位基因 80%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-2" style="width:20%"></span><span class="odds-label" id="bronze-odds-2">3个隐性等位基因 20%</span></div>
           </div>
           <button class="box-buy-btn" onclick="buyBox('bronze')" id="box-bronze-btn">
             <span id="box-bronze-btn-label">购买</span>
@@ -107,9 +148,9 @@
             <span class="box-price" id="box-silver-price">350</span>
           </div>
           <div class="box-odds" id="box-silver-odds">
-            <div class="odds-row"><span class="odds-bar bar-1" style="width:70%"></span><span class="odds-label" id="silver-odds-1">3个隐性基因 70%</span></div>
-            <div class="odds-row"><span class="odds-bar bar-2" style="width:25%"></span><span class="odds-label" id="silver-odds-2">4个隐性基因 25%</span></div>
-            <div class="odds-row"><span class="odds-bar bar-3" style="width:5%"></span><span class="odds-label" id="silver-odds-3">5个隐性基因 5%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-1" style="width:70%"></span><span class="odds-label" id="silver-odds-1">3个隐性等位基因 70%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-2" style="width:25%"></span><span class="odds-label" id="silver-odds-2">4个隐性等位基因 25%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-3" style="width:5%"></span><span class="odds-label" id="silver-odds-3">5个隐性等位基因 5%</span></div>
           </div>
 
           <div class="odds-label" id="box-silver-lock">解锁20种花后开放</div>
@@ -127,8 +168,8 @@
           </div>
           <div class="box-odds" id="box-gold-odds">
             <div class="odds-row"><span class="odds-bar bar-1" style="width:60%"></span><span class="odds-label" id="gold-odds-1">5个隐性基因 60%</span></div>
-            <div class="odds-row"><span class="odds-bar bar-2" style="width:35%"></span><span class="odds-label" id="gold-odds-2">6-7个隐性基因 35%</span></div>
-            <div class="odds-row"><span class="odds-bar bar-3" style="width:5%"></span><span class="odds-label" id="gold-odds-3">8个隐性基因 5%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-2" style="width:35%"></span><span class="odds-label" id="gold-odds-2">6-7个隐性等位基因 35%</span></div>
+            <div class="odds-row"><span class="odds-bar bar-3" style="width:5%"></span><span class="odds-label" id="gold-odds-3">8个隐性等位基因 5%</span></div>
           </div>
           <div class="odds-label" id="box-gold-lock">解锁50种花后开放</div>
           <button class="box-buy-btn" onclick="buyBox('gold')" id="box-gold-btn" disabled>

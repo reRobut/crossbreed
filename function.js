@@ -574,70 +574,68 @@ function selfPollinate(plotId, event) {
 }
 
 function computeBreedOdds(gA, gB) {
-  // For each locus, compute allele frequencies from parent pair
-  // Returns a map of phenotype-key -> probability (0-1)
+  // Returns a map of phenotype-key -> {prob, colorP, flowerP}
+  // Uses 3-state (homDom/het/homRec) enumeration per locus so petalClass works correctly.
   const loci = ['A','B','C','D','E','T'];
 
-  // Enumerate all 2^6 = 64 locus combos and group by phenotype
-  function locusProbs(pairA, pairB) {
-    // pairA/pairB are 2-char strings like 'Aa', 'aa', 'AA'
-    const gaOpts = [pairA[0], pairA[1]]; // each 50%
+  // For one locus, compute P(homDom), P(het), P(homRec) from two parent pairs
+  function locusTriProbs(pairA, pairB) {
+    const gaOpts = [pairA[0], pairA[1]];
     const gbOpts = [pairB[0], pairB[1]];
-    const counts = {};
+    let homDom = 0, het = 0, homRec = 0;
     for (const ga of gaOpts) for (const gb of gbOpts) {
-      const sorted = sortPair(ga+gb, pairA[0] !== pairA[0].toLowerCase() ? pairA[0] : pairB[0]);
-      const isDom = sorted[0] === sorted[0].toUpperCase();
-      const key = isDom ? 'dom' : 'rec';
-      counts[key] = (counts[key]||0) + 0.25;
+      const isADom = ga === ga.toUpperCase();
+      const isBDom = gb === gb.toUpperCase();
+      if (isADom && isBDom) homDom += 0.25;
+      else if (!isADom && !isBDom) homRec += 0.25;
+      else het += 0.25;
     }
-    return counts; // {dom: p, rec: p}
+    return [homDom, het, homRec]; // [P(DD), P(Dd), P(dd)]
   }
 
-  // For each locus get P(dom) and P(rec)
-  const locusProbsDom = {};
+  // Precompute tri-probs for each locus
+  const triProbs = {};
   loci.forEach(L => {
     const pairA = gA[L] || (L.toUpperCase()+L.toLowerCase());
     const pairB = gB[L] || (L.toUpperCase()+L.toLowerCase());
-    const probs = locusProbs(pairA, pairB);
-    locusProbsDom[L] = probs['dom'] || 0;
+    triProbs[L] = locusTriProbs(pairA, pairB); // [homDom, het, homRec]
   });
 
-  // Enumerate all color phenotype combos (A,B,C)
-  const colorLoci = ['A','B','C'];
+  // Build mock geno from state array (0=homDom, 1=het, 2=homRec)
+  function mockGeno(locusList, states) {
+    const g = {};
+    locusList.forEach((L, i) => {
+      if (states[i] === 0) g[L] = L.toUpperCase()+L.toUpperCase();
+      else if (states[i] === 1) g[L] = L.toUpperCase()+L.toLowerCase();
+      else g[L] = L.toLowerCase()+L.toLowerCase();
+    });
+    return g;
+  }
+
+  const colorLoci  = ['A','B','C'];
   const flowerLoci = ['D','E','T'];
   const phenoProbs = {};
 
-  const colorStates = [[0,0,0],[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,1,1]];
-  const flowerStates = [[0,0,0],[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,1,1]];
+  // Enumerate 3^3=27 color combos × 3^3=27 flower combos = 729 total
+  const states3 = [0,1,2];
+  for (const cA of states3) for (const cB of states3) for (const cC of states3) {
+    const cp_prob = triProbs['A'][cA] * triProbs['B'][cB] * triProbs['C'][cC];
+    if (cp_prob < 1e-9) continue;
+    const colorGeno = mockGeno(colorLoci, [cA, cB, cC]);
+    const colorP = colorPhenotype(colorGeno);
 
-  colorStates.forEach(cs => {
-    let cp = 1;
-    colorLoci.forEach((L,i) => {
-      cp *= cs[i] ? locusProbsDom[L] : (1 - locusProbsDom[L]);
-    });
-    if (cp < 0.0001) return;
-
-    const mockColorGeno = {};
-    colorLoci.forEach((L,i) => { mockColorGeno[L] = cs[i] ? L.toUpperCase()+L.toLowerCase() : L.toLowerCase()+L.toLowerCase(); });
-    const colorP = colorPhenotype(mockColorGeno);
-
-    flowerStates.forEach(fs => {
-      let fp = 1;
-      flowerLoci.forEach((L,i) => {
-        fp *= fs[i] ? locusProbsDom[L] : (1 - locusProbsDom[L]);
-      });
-      if (fp < 0.0001) return;
-
-      const mockFlowerGeno = {};
-      flowerLoci.forEach((L,i) => { mockFlowerGeno[L] = fs[i] ? L.toUpperCase()+L.toLowerCase() : L.toLowerCase()+L.toLowerCase(); });
-      const flowerP = flowerPhenotype(mockFlowerGeno);
+    for (const fD of states3) for (const fE of states3) for (const fT of states3) {
+      const fp_prob = triProbs['D'][fD] * triProbs['E'][fE] * triProbs['T'][fT];
+      if (fp_prob < 1e-9) continue;
+      const flowerGeno = mockGeno(flowerLoci, [fD, fE, fT]);
+      const flowerP = flowerPhenotype(flowerGeno);
 
       const key = colorP.name + '|' + flowerP.name;
-      const prob = cp * fp;
+      const prob = cp_prob * fp_prob;
       if (!phenoProbs[key]) phenoProbs[key] = {prob:0, colorP, flowerP};
       phenoProbs[key].prob += prob;
-    });
-  });
+    }
+  }
 
   return phenoProbs;
 }
@@ -886,14 +884,14 @@ function applyLang() {
   ['bronze','silver','gold'].forEach(t => se('box-'+t+'-btn-label', s.buy));
   // Odds labels
   const oddsZh = {
-    'bronze-odds-1':'携带1-2隐性基因 80%','bronze-odds-2':'携带3个隐性基因 20%',
-    'silver-odds-1':'携带3个隐性基因 70%','silver-odds-2':'携带4个隐性基因 25%','silver-odds-3':'携带5个隐性基因 5%',
-    'gold-odds-1':'携带5个隐性基因 60%','gold-odds-2':'携带6-7个隐性基因 35%','gold-odds-3':'携带8个隐性基因 5%',
+    'bronze-odds-1':'1-2个隐性等位基因 80%','bronze-odds-2':'3个隐性等位基因 20%',
+    'silver-odds-1':'3个隐性等位基因 70%','silver-odds-2':'4个隐性等位基因 25%','silver-odds-3':'5个隐性等位基因 5%',
+    'gold-odds-1':'5个隐性等位基因 60%','gold-odds-2':'6-7个隐性等位基因 35%','gold-odds-3':'8个隐性等位基因 5%',
   };
   const oddsEn = {
-    'bronze-odds-1':'1-2 rec. loci 80%','bronze-odds-2':'3 rec. loci 20%',
-    'silver-odds-1':'3 rec. loci 70%','silver-odds-2':'4 rec. loci 25%','silver-odds-3':'5 rec. loci 5%',
-    'gold-odds-1':'5 rec. loci 60%','gold-odds-2':'6-7 rec. loci 35%','gold-odds-3':'8 rec. loci 5%',
+    'bronze-odds-1':'1-2 rec. alleles 80%','bronze-odds-2':'3 rec. alleles 20%',
+    'silver-odds-1':'3 rec. alleles 70%','silver-odds-2':'4 rec. alleles 25%','silver-odds-3':'5 rec. alleles 5%',
+    'gold-odds-1':'5 rec. alleles 60%','gold-odds-2':'6-7 rec. alleles 35%','gold-odds-3':'8 rec. alleles 5%',
   };
   const oddsMap = lang==='zh' ? oddsZh : oddsEn;
   Object.entries(oddsMap).forEach(([id,txt]) => se(id,txt));
@@ -1030,16 +1028,16 @@ function rollBoxSeed(tier) {
   let geno;
 
   if (tier === 'bronze') {
-    // 80%: 1-2 recessive loci; 20%: 3 recessive loci
+    // 80%: 1-2 recessive alleles; 20%: 3 recessive alleles
     if (r < 0.80) geno = rollByRecCount(pickFrom([1,2]));
     else           geno = rollByRecCount(3);
   } else if (tier === 'silver') {
-    // 70%: 3 rec; 25%: 4 rec; 5%: 5 rec
+    // 70%: 3 rec alleles; 25%: 4 rec alleles; 5%: 5 rec alleles
     if (r < 0.70)      geno = rollByRecCount(3);
     else if (r < 0.95) geno = rollByRecCount(4);
     else               geno = rollByRecCount(5);
   } else {
-    // 60%: 5 rec; 35%: 6 or 7 rec; 5%: 8 rec (all recessive = white lotus)
+    // 60%: 5 rec alleles; 35%: 6-7 rec alleles; 5%: 8 rec alleles
     if (r < 0.60)      geno = rollByRecCount(5);
     else if (r < 0.95) geno = rollByRecCount(pickFrom([6,7]));
     else               geno = rollByRecCount(8);
@@ -1048,22 +1046,34 @@ function rollBoxSeed(tier) {
   return {id: nextSeedId++, geno, source: boxName(tier), parentAName: null, parentBName: null, color: colorPhenotype(geno).hex};
 }
 
-// Roll a genotype where exactly `recCount` loci are homozygous recessive (aa/bb/...),
-// and the rest are randomly dominant or heterozygous.
-function rollByRecCount(recCount) {
+// Roll a genotype where exactly `recAlleles` recessive alleles are distributed across loci.
+// Each locus can contribute 0 (AA), 1 (Aa), or 2 (aa) recessive alleles.
+// recAlleles is the total count of recessive alleles (max 12 across 6 loci).
+function rollByRecCount(recAlleles) {
   const loci = ['A','B','C','D','E','T'];
-  recCount = Math.min(recCount, loci.length); // cap at 6 (but design says up to 8 via pairs — treated as locus count)
-  // Shuffle and pick which loci go recessive
-  const shuffled = [...loci].sort(() => Math.random() - 0.5);
-  const recLoci = new Set(shuffled.slice(0, recCount));
+  const n = loci.length; // 6
+  recAlleles = Math.max(0, Math.min(recAlleles, n * 2)); // clamp 0–12
+
+  // Distribute recAlleles randomly across loci:
+  // Start all loci at 0 recessive alleles (AA).
+  // Shuffle a pool of n*2 slots, mark recAlleles of them as recessive.
+  // Each locus gets 0, 1, or 2 recessive alleles based on its slots.
+  const pool = Array(n * 2).fill(0).map((_, i) => Math.floor(i / 2)); // [0,0,1,1,2,2,3,3,4,4,5,5]
+  // Fisher-Yates shuffle then take first recAlleles as "recessive"
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  const recSlots = pool.slice(0, recAlleles);
+  const recPerLocus = Array(n).fill(0);
+  recSlots.forEach(idx => recPerLocus[idx]++);
+
   const g = {};
-  loci.forEach(L => {
-    if (recLoci.has(L)) {
-      g[L] = recPair(L); // homozygous recessive
-    } else {
-      // randomly dominant homozygous or heterozygous
-      g[L] = Math.random() < 0.5 ? domPair(L) : hetPair(L);
-    }
+  loci.forEach((L, i) => {
+    const r = recPerLocus[i];
+    if (r === 2) g[L] = recPair(L);       // aa
+    else if (r === 1) g[L] = hetPair(L);  // Aa
+    else g[L] = domPair(L);               // AA
   });
   return g;
 }
@@ -1240,24 +1250,22 @@ function renderStorage() {
   const sellAllBtn = document.getElementById('storage-sell-all-btn');
   const countLabel = document.getElementById('storage-count-label');
 
-  const filtered = storageItems.filter(item => {
+  // Main grid: non-favorite items only
+  const nonFavItems = storageItems.filter(item => {
+    if (item.favorite) return false;
     if (storageFilter === 'all') return true;
     return overallRarity(item.cp, item.fp) === storageFilter;
   });
 
-  // all filtered items in main grid (including favorites)
-  const mainItems = filtered;
+  countLabel.textContent = `${nonFavItems.length} ${lang==='zh'?'株':'flowers'}`;
+  sellAllBtn.disabled = nonFavItems.length === 0;
 
-  const sellableItems = filtered.filter(item => !item.favorite);
-  countLabel.textContent = `${filtered.length} ${lang==='zh'?'株':'flowers'}`;
-  sellAllBtn.disabled = sellableItems.length === 0;
-
-  if (mainItems.length === 0) {
+  if (nonFavItems.length === 0) {
     grid.innerHTML = '';
     empty.style.display = 'flex';
   } else {
     empty.style.display = 'none';
-    grid.innerHTML = mainItems.map(item => makeFlowerCardHTML(item)).join('');
+    grid.innerHTML = nonFavItems.map(item => makeFlowerCardHTML(item)).join('');
   }
 
   renderFavStrip();
@@ -1296,9 +1304,11 @@ function renderFavStrip() {
   }
   scroll.innerHTML = favItems.map(item => {
     const name = lang==='zh' ? item.cp.name+item.fp.name : item.cp.nameEn+' '+item.fp.nameEn;
-    return `<div class="fav-chip">
+    const tip = lang==='zh' ? '点击返回仓库' : 'Tap to unpin';
+    return `<div class="fav-chip" onclick="toggleFav(${item.id})" title="${tip}" style="cursor:pointer;">
       <div class="fav-chip-dot">${flowerSVG(flowerSvgKey(item.fp), item.cp.hex, 38)}</div>
       <div class="fav-chip-name">${name}</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:1px;opacity:.7;">${tip}</div>
     </div>`;
   }).join('');
 }
