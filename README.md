@@ -1,3 +1,15 @@
+1. 右上角语言切换标签不随当前语言变化，就写EN
+
+function svgRose(p, c, d, stem) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 491.279 491.279" width="100%" height="100%"><g>
+	<g id="Capa_1_4_">
+		<g>
+        </g>
+	</g>
+</g></svg>`;
+}
+
+
 方案 D — 镭射彩虹动画（最炫）
 用 hue-rotate CSS 动画：filter: hue-rotate(0deg) → hue-rotate(360deg) 循环，花朵颜色会持续变换色相，传说稀有度的花可以专用。
 
