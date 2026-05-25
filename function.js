@@ -196,7 +196,7 @@ function initGame() {
 }
 
 function makePlot(state='empty') {
-  return {id: nextPlotId++, state, flower: null, growStart: null, growDuration: null, breedCount: 0, parentAName:'', parentBName:''};
+  return {id: nextPlotId++, state, flower: null, growStart: null, growDuration: null, breedCount: 0, selfBreedCount: 0, parentAName:'', parentBName:''};
 }
 
 // ═══════════════════════════════════════════════════
@@ -269,6 +269,7 @@ function makePlotEl(plot) {
       const fp = flowerPhenotype(plot.flower);
       const val = sellValue(cp, fp);
       const infertile = plot.breedCount >= 3;
+      const selfUsed = (plot.selfBreedCount || 0) >= 1;
       const isA = breedA === plot.id;
       const isB = breedB === plot.id;
 
@@ -279,6 +280,7 @@ function makePlotEl(plot) {
       const badgeA = isA ? `<div class="plot-badge badge-a">${lang==='zh'?'母本':'♀'}</div>` : '';
       const badgeB = isB ? `<div class="plot-badge badge-b">${lang==='zh'?'父本':'♂'}</div>` : '';
       const breedDisabled = infertile ? 'disabled style="opacity:.3;cursor:not-allowed;"' : '';
+      const selfDisabled = selfUsed ? 'disabled style="opacity:.3;cursor:not-allowed;"' : '';
 
       div.innerHTML = `
         ${badgeA}${badgeB}
@@ -289,10 +291,10 @@ function makePlotEl(plot) {
           <div class="flower-name">${lang==='zh'?cp.name:cp.nameEn} ${lang==='zh'?fp.name:fp.nameEn}</div>
           <div class="flower-sell-val"><span class="plot-coin"></span>${val}</div>
           ${genoDisplay}
-          <div class="flower-breed-count">${lang==='zh'?`配种 ${plot.breedCount}/3`:`Bred ${plot.breedCount}/3`}</div>
+          <div class="flower-breed-count">${lang==='zh'?`配种 ${plot.breedCount}/3`:`Bred ${plot.breedCount}/3`}${(plot.selfBreedCount||0)>=1 ? (lang==='zh'?' · 已自交':' · Self ✓') : ''}</div>
           <div class="plot-actions">
             <button class="plot-btn primary" ${breedDisabled} onclick="selectForBreed(${plot.id},event)">${lang==='zh'?'配种':'Breed'}</button>
-            <button class="plot-btn" onclick="selfPollinate(${plot.id},event)">${lang==='zh'?'自授粉':'Self'}</button>
+            <button class="plot-btn" ${selfDisabled} onclick="selfPollinate(${plot.id},event)">${lang==='zh'?'自授粉':'Self'}</button>
             <button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${lang==='zh'?'收获':'Harvest'}</button>
           </div>
         </div>`;
@@ -452,6 +454,7 @@ function plantSeedOnPlot(plotId) {
   plot.growStart = Date.now();
   plot.growDuration = duration;
   plot.breedCount = 0;
+  plot.selfBreedCount = 0;
   plot.parentAName = seed.parentAName;
   plot.parentBName = seed.parentBName;
 
@@ -569,6 +572,10 @@ function selfPollinate(plotId, event) {
   event.stopPropagation();
   const plot = plots.find(p => p.id === plotId);
   if (!plot || plot.state !== 'ready') return;
+  if ((plot.selfBreedCount || 0) >= 1) {
+    showGoldToast(lang==='zh' ? '每株只能自交一次' : 'Self-pollination allowed once per plant');
+    return;
+  }
   breedA = plotId; breedB = plotId;
   openBreedPopup();
 }
@@ -649,9 +656,29 @@ function renderBreedPredictions(gA, gB, cpA, fpA, cpB, fpB, isSelf) {
 
   const showProbs = difficulty === 'easy';
 
-  // Top entries to show (≥1% or top 3)
+  // Top entries to show (≥1%)；其余合并为"其他"
   const significant = entries.filter(e => e.prob >= 0.01);
-  const unknownProb = entries.filter(e => e.prob < 0.01).reduce((s,e) => s+e.prob, 0);
+  const unknownProb = entries.filter(e => e.prob < 0.01).reduce((s, e) => s + e.prob, 0);
+
+  // 归一化：把所有要显示的条目（含"其他"）的概率统一缩放到总和=100%，
+  // 避免各自独立四舍五入后叠加超过100%
+  const displayEntries = significant.slice(); // 浅拷贝，不改原数据
+  const hasOther = unknownProb > 0.001;
+  const totalShown = displayEntries.reduce((s, e) => s + e.prob, 0) + (hasOther ? unknownProb : 0);
+  // totalShown 理论上已等于1，但浮点误差可能导致轻微偏差，归一化修正
+  const scale = totalShown > 0 ? 1 / totalShown : 1;
+
+  // 用"最大余数法"分配整数百分比，确保总和恰好为100
+  const rawPcts = displayEntries.map(e => e.prob * scale * 100);
+  const floors  = rawPcts.map(v => Math.floor(v));
+  const remainders = rawPcts.map((v, i) => ({ i, r: v - floors[i] }));
+  const totalFloor = floors.reduce((s, v) => s + v, 0);
+  let toDistribute = Math.round(100 - totalFloor - (hasOther ? Math.floor(unknownProb * scale * 100) : 0));
+  remainders.sort((a, b) => b.r - a.r);
+  const finalPcts = [...floors];
+  for (let k = 0; k < toDistribute && k < remainders.length; k++) {
+    finalPcts[remainders[k].i]++;
+  }
 
   let html = `<div class="breed-pred-title">${lang==='zh'?'后代预测':'Offspring Prediction'}</div>`;
   html += `<div class="breed-pred-parents">
@@ -661,9 +688,9 @@ function renderBreedPredictions(gA, gB, cpA, fpA, cpB, fpB, isSelf) {
   </div>`;
   html += `<div class="breed-pred-list">`;
 
-  significant.forEach(e => {
-    const pct = Math.round(e.prob * 100 * 10) / 10;
-    const pctStr = pct < 1 ? pct.toFixed(1)+'%' : Math.round(pct)+'%';
+  displayEntries.forEach((e, idx) => {
+    const pct = finalPcts[idx];
+    const pctStr = pct + '%';
     const discKey = e.colorP.name + '|' + e.flowerP.name;
     const isKnown = discovered.has(discKey);
     const barColor = isKnown ? e.colorP.hex : '#666';
@@ -675,19 +702,19 @@ function renderBreedPredictions(gA, gB, cpA, fpA, cpB, fpB, isSelf) {
       : `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:18px;opacity:.45;">？</div>`;
     html += `<div class="breed-pred-row">
       <div class="breed-pred-flower">${flowerIcon}</div>
-      <div class="breed-pred-bar-wrap"><div class="breed-pred-bar" style="width:${Math.round(e.prob*100)}%;background:${barColor};opacity:.85;"></div></div>
+      <div class="breed-pred-bar-wrap"><div class="breed-pred-bar" style="width:${pct}%;background:${barColor};opacity:.85;"></div></div>
       <div class="breed-pred-label">${name}</div>
       ${showProbs ? `<div class="breed-pred-pct">${pctStr}</div>` : ''}
     </div>`;
   });
 
-  if (unknownProb > 0.001) {
-    const pct = Math.round(unknownProb * 100);
+  if (hasOther) {
+    const otherPct = Math.round(unknownProb * scale * 100);
     html += `<div class="breed-pred-row breed-pred-unknown">
       <div class="breed-pred-unk-icon">？</div>
-      <div class="breed-pred-bar-wrap"><div class="breed-pred-bar" style="width:${pct}%;background:#888;opacity:.5;"></div></div>
+      <div class="breed-pred-bar-wrap"><div class="breed-pred-bar" style="width:${otherPct}%;background:#888;opacity:.5;"></div></div>
       <div class="breed-pred-label">${lang==='zh'?'其他':'Other'}</div>
-      ${showProbs ? `<div class="breed-pred-pct">${pct}%</div>` : ''}
+      ${showProbs ? `<div class="breed-pred-pct">${otherPct}%</div>` : ''}
     </div>`;
   }
 
@@ -768,7 +795,11 @@ function confirmBreed() {
   }
 
   pA.breedCount++;
-  if (!isSelf) pB.breedCount++;
+  if (isSelf) {
+    pA.selfBreedCount = (pA.selfBreedCount || 0) + 1;
+  } else {
+    pB.breedCount++;
+  }
 
   document.getElementById('breed-popup').classList.remove('open');
   breedA = null; breedB = null;
@@ -902,7 +933,7 @@ function applyLang() {
   Object.entries(badgeMap).forEach(([t,txt]) => se('box-'+t+'-badge',txt));
   document.querySelectorAll('.tab').forEach(t => { t.textContent = TAB_LABELS[t.dataset.tab][lang]; });
   const tlb = document.getElementById('topbar-lang-btn');
-  if (tlb) tlb.textContent = lang === 'zh' ? '中文' : 'EN';
+  if (tlb) tlb.textContent = getLangBtnLabel();
   document.querySelectorAll('.lang-opt').forEach(b => {
     b.classList.toggle('active', (lang==='zh' && b.textContent==='中文') || (lang==='en' && b.textContent==='English'));
   });
@@ -917,9 +948,14 @@ function setLang(l) { lang = l; applyLang(); }
 
 function toggleLang() {
   lang = lang === 'zh' ? 'en' : 'zh';
-  document.getElementById('topbar-lang-btn').textContent = lang === 'zh' ? '中文' : 'EN';
   applyLang();
   applyHomeLang();
+}
+
+function getLangBtnLabel() {
+  // Always show the OTHER language so user knows what clicking does
+  // Written in both scripts so either user recognises it
+  return lang === 'zh' ? 'EN / English' : '中文';
 }
 
 function saveGame() {
@@ -1392,13 +1428,13 @@ const CAT_FLOWERS = [
 
 const CAT_COLORS = [
   { key:'黑色', keyEn:'Black',  hex:'#494949', coef:1  },
-  { key:'橙色', keyEn:'Orange', hex:'#faaf00', coef:2  },
-  { key:'紫色', keyEn:'Purple', hex:'#9b69e1', coef:2  },
-  { key:'绿色', keyEn:'Green',  hex:'#b6e84a', coef:2  },
+  { key:'橙色', keyEn:'Orange', hex:'#ffa449', coef:2  },
+  { key:'紫色', keyEn:'Purple', hex:'#ac79f4', coef:2  },
+  { key:'绿色', keyEn:'Green',  hex:'#b0df49', coef:2  },
   { key:'红色', keyEn:'Red',    hex:'#ef3047', coef:4  },
-  { key:'黄色', keyEn:'Yellow', hex:'#f7f752', coef:4  },
+  { key:'黄色', keyEn:'Yellow', hex:'#efd95b', coef:4  },
   { key:'蓝色', keyEn:'Blue',   hex:'#82a0ff', coef:4  },
-  { key:'纯白', keyEn:'White',  hex:'#f0e6cc', coef:12 },
+  { key:'纯白', keyEn:'White',  hex:'#f2ead6', coef:12 },
 ];
 
 // Tier separator indices (after these indices, draw a thicker border)
@@ -1443,9 +1479,11 @@ function renderCatalog() {
     html += `<div class="cat-row-header" style="${rowSep}">${lang==='zh' ? fl.key : fl.keyEn}</div>`;
 
     // Cells
+    // 【图鉴全开开关】将下方 CATALOG_SHOW_ALL 改为 false 可恢复正常（只显示已发现的花）
+    const CATALOG_SHOW_ALL = false;
     CAT_COLORS.forEach((col, ci) => {
       const discKey = col.key + '|' + fl.key;
-      const isFound = discovered.has(discKey);
+      const isFound = CATALOG_SHOW_ALL || discovered.has(discKey);
       const colSep = COLOR_TIER_SEP.includes(ci) ? 'border-left:1px solid var(--border2);' : '';
       const val = col.coef * fl.coef;
 
@@ -1505,7 +1543,7 @@ function toggleHomeLang() {
 
 function applyHomeLang() {
   const isZh = lang === 'zh';
-  document.getElementById('home-lang-label').textContent = isZh ? 'EN / 中文' : '中文 / EN';
+  document.getElementById('home-lang-label').textContent = isZh ? '中文 ↔ EN' : 'EN ↔ 中文';
   // Update button text based on current lang
   const startBtn = document.getElementById('home-start-btn');
   const contBtn  = document.getElementById('home-continue-btn');
@@ -1517,7 +1555,7 @@ function applyHomeLang() {
   });
   // sync topbar lang button
   const tlb = document.getElementById('topbar-lang-btn');
-  if (tlb) tlb.textContent = isZh ? '中文' : 'EN';
+  if (tlb) tlb.textContent = getLangBtnLabel();
 }
 
 function homeStart() {
@@ -1525,6 +1563,7 @@ function homeStart() {
   document.getElementById('home-overlay').classList.add('fade-out');
   setTimeout(() => { document.getElementById('home-overlay').style.display = 'none'; }, 600);
   initGame();
+  applyLang();
 }
 
 function homeContinue() {
