@@ -75,7 +75,7 @@ function flowerPhenotype(g) {
   // Map (petalClass, shape) → flower
   const TABLE = {
     p4:  { round:{name:'虞美人', nameEn:'Poppy',        svgKey:'罂粟',   rarity:'legend', coef:75},
-            point:{name:'冰晶花',nameEn:'Ice Crystal',  svgKey:'水仙',   rarity:'legend', coef:75} },
+            point:{name:'水仙',  nameEn:'Daffodil',     svgKey:'水仙',   rarity:'legend', coef:75} },
     p8:  { round:{name:'木兰',   nameEn:'Magnolia',    svgKey:'木兰',   rarity:'epic',   coef:30},
             point:{name:'铁线莲', nameEn:'Clematis',    svgKey:'铁线莲', rarity:'legend', coef:75} },
     p12: { round:{name:'康乃馨', nameEn:'Carnation',   svgKey:'康乃馨',   rarity:'rare',   coef:12},
@@ -103,14 +103,11 @@ function hasDom(g, locus) {
   return pair[0] === locus.toUpperCase() || pair[1] === locus.toUpperCase();
 }
 
-function rarityLabel(r, lang) {
-  const map = {
-    common: {zh:'普通', en:'Common'},
-    rare:   {zh:'稀有', en:'Rare'},
-    epic:   {zh:'史诗', en:'Epic'},
-    legend: {zh:'传说', en:'Legend'},
-  };
-  return map[r][lang] || r;
+function rarityLabel(r) {
+  // uses lang.js t() if available, else fallback
+  if (typeof t === 'function') return t('rarity', r);
+  const map = { common:'Common', rare:'Rare', epic:'Epic', legend:'Legend' };
+  return map[r] || r;
 }
 
 // Overall rarity (take the higher of color+flower)
@@ -160,6 +157,8 @@ function parseGeno(str) {
 // ═══════════════════════════════════════════════════
 // GAME STATE
 // ═══════════════════════════════════════════════════
+// lang is now a 10-value code: zh, tw, en, ru, pt, de, fr, es, ja, ko
+// Default: zh. lang.js provides all translations via t(), flowerName(), colorName().
 let lang = 'zh';
 let difficulty = 'easy';
 let gold = 100;
@@ -218,7 +217,7 @@ function renderPlots() {
       console.warn('Failed to render plot', plot.id, err);
       const fallback = document.createElement('div');
       fallback.className = 'plot ready';
-      fallback.innerHTML = `<div class="plot-flower"><div class="flower-name" style="color:var(--muted);font-size:12px;">⚠ 渲染错误</div><div class="plot-actions"><button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${lang==='zh'?'收获':'Harvest'}</button></div></div>`;
+      fallback.innerHTML = `<div class="plot-flower"><div class="flower-name" style="color:var(--muted);font-size:15px;">⚠ ${t('nursery','renderError')}</div><div class="plot-actions"><button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${t('nursery','harvest')}</button></div></div>`;
       grid.appendChild(fallback);
     }
   });
@@ -228,13 +227,13 @@ function renderPlots() {
     const nextUnlockAt = (plots.length - 4 + 1) * 10;
     const needed = nextUnlockAt - disc;
     const hintText = needed > 0
-      ? (lang === 'zh' ? `再发现 ${needed} 种花解锁` : `${needed} more flowers to unlock`)
+      ? `${needed} ${t('nursery','moreFlowers')}`
       : '';
     const btn = document.createElement('div');
     btn.className = 'plot empty';
     btn.style.opacity = '.35';
     btn.style.cursor = 'default';
-    btn.innerHTML = `<div class="plot-empty-hint"><b>+</b><span style="font-size:11px;display:block;margin-top:6px;">${hintText}</span></div>`;
+    btn.innerHTML = `<div class="plot-empty-hint"><b>+</b><span style="font-size:14px;display:block;margin-top:6px;">${hintText}</span></div>`;
     grid.appendChild(btn);
   }
 }
@@ -257,11 +256,11 @@ function makePlotEl(plot) {
     const pct = Math.min(100, (elapsed / plot.growDuration) * 100);
     div.innerHTML = `
       <div class="plot-question">?</div>
-      <div class="plot-grow-label">${lang==='zh'?'生长中':'Growing'}</div>
+      <div class="plot-grow-label">${t('nursery','growing')}</div>
       <div class="plot-timer" id="timer-${plot.id}">${formatTime(remaining)}</div>
       <div class="plot-progress-bg"><div class="plot-progress-fill" id="prog-${plot.id}" style="width:${pct}%"></div></div>
       <div class="plot-parents">${plot.parentAName} × ${plot.parentBName}</div>
-      <button class="plot-discard" onclick="discardPlot(${plot.id},event)">${lang==='zh'?'丢弃':'Discard'}</button>`;
+      <button class="plot-discard" onclick="discardPlot(${plot.id},event)">${t('nursery','discard')}</button>`;
 
   } else if (plot.state === 'ready') {
     try {
@@ -277,8 +276,8 @@ function makePlotEl(plot) {
 
       const showGeno = difficulty !== 'expert';
       const genoDisplay = showGeno ? `<div class="flower-genotype">${genoStr(plot.flower)}</div>` : '';
-      const badgeA = isA ? `<div class="plot-badge badge-a">${lang==='zh'?'母本':'♀'}</div>` : '';
-      const badgeB = isB ? `<div class="plot-badge badge-b">${lang==='zh'?'父本':'♂'}</div>` : '';
+      const badgeA = isA ? `<div class="plot-badge badge-a">${t('nursery','motherLabel')}</div>` : '';
+      const badgeB = isB ? `<div class="plot-badge badge-b">${t('nursery','fatherLabel')}</div>` : '';
       const breedDisabled = infertile ? 'disabled style="opacity:.3;cursor:not-allowed;"' : '';
       const selfDisabled = selfUsed ? 'disabled style="opacity:.3;cursor:not-allowed;"' : '';
 
@@ -288,14 +287,14 @@ function makePlotEl(plot) {
           <div class="flower-visual">
             ${flowerSVG(flowerSvgKey(fp), cp.hex, 120)}
           </div>
-          <div class="flower-name">${lang==='zh'?cp.name:cp.nameEn} ${lang==='zh'?fp.name:fp.nameEn}</div>
+          <div class="flower-name">${colorName(cp.name)} ${flowerName(fp.name)}</div>
           <div class="flower-sell-val"><span class="plot-coin"></span>${val}</div>
           ${genoDisplay}
-          <div class="flower-breed-count">${lang==='zh'?`配种 ${plot.breedCount}/3`:`Bred ${plot.breedCount}/3`}${(plot.selfBreedCount||0)>=1 ? (lang==='zh'?' · 已自交':' · Self ✓') : ''}</div>
+          <div class="flower-breed-count">${t('nursery','breedCount')} ${plot.breedCount}/3${(plot.selfBreedCount||0)>=1 ? (' · ' + t('nursery','selfDone')) : ''}</div>
           <div class="plot-actions">
-            <button class="plot-btn primary" ${breedDisabled} onclick="selectForBreed(${plot.id},event)">${lang==='zh'?'配种':'Breed'}</button>
-            <button class="plot-btn" ${selfDisabled} onclick="selfPollinate(${plot.id},event)">${lang==='zh'?'自授粉':'Self'}</button>
-            <button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${lang==='zh'?'收获':'Harvest'}</button>
+            <button class="plot-btn primary" ${breedDisabled} onclick="selectForBreed(${plot.id},event)">${t('nursery','breed')}</button>
+            <button class="plot-btn" ${selfDisabled} onclick="selfPollinate(${plot.id},event)">${t('nursery','self')}</button>
+            <button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${t('nursery','harvest')}</button>
           </div>
         </div>`;
     } catch(err) {
@@ -304,9 +303,9 @@ function makePlotEl(plot) {
       div.className = 'plot ready';
       div.innerHTML = `
         <div class="plot-flower">
-          <div class="flower-name" style="color:var(--muted);font-size:12px;">⚠ 渲染错误</div>
+          <div class="flower-name" style="color:var(--muted);font-size:14px;">⚠ ${t('nursery','renderError')}</div>
           <div class="plot-actions">
-            <button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${lang==='zh'?'收获':'Harvest'}</button>
+            <button class="plot-btn" onclick="harvestPlot(${plot.id},event)">${t('nursery','harvest')}</button>
           </div>
         </div>`;
     }
@@ -317,10 +316,10 @@ function makePlotEl(plot) {
 function renderSeedBar() {
   const scroll = document.getElementById('seed-bar-scroll');
   document.getElementById('seed-total-label').textContent =
-    `${seeds.length} ${lang==='zh'?'颗':'seeds'}`;
+    `${seeds.length} ${t('nursery','seedCount')}`;
 
   if (seeds.length === 0) {
-    scroll.innerHTML = `<span class="seed-empty">${lang==='zh'?'暂无种子 — 前往商店购买盲盒':'No seeds — visit Shop to buy blind boxes'}</span>`;
+    scroll.innerHTML = `<span class="seed-empty">${t('nursery','noSeeds')}</span>`;
     return;
   }
 
@@ -352,7 +351,7 @@ function renderSeedBar() {
   if (plots.some(p => p.state==='empty')) {
     const hint = document.createElement('span');
     hint.className = 'plant-seed-hint';
-    hint.textContent = lang==='zh' ? '← 选择种子，点击空槽种植' : '← Select seed, click empty plot';
+    hint.textContent = t('nursery','selectSeedHint');
     scroll.appendChild(hint);
   }
   updateSeedSellBtns();
@@ -392,8 +391,8 @@ function updateSeedSellBtns() {
   const price = seedSellPrice(group[0].geno);
   const totalPrice = price * group.length;
   btns.style.display = 'flex';
-  oneBtn.textContent = lang === 'zh' ? `卖1颗 +${price}` : `Sell 1 +${price}`;
-  allBtn.textContent = lang === 'zh' ? `全卖 +${totalPrice}` : `Sell all +${totalPrice}`;
+  oneBtn.textContent = `${t('nursery','sellOne')} +${price}`;
+  allBtn.textContent = `${t('nursery','sellAll')} +${totalPrice}`;
 }
 
 function sellSelectedSeedOne() {
@@ -547,7 +546,7 @@ function harvestPlot(plotId, event) {
   renderStorage();
   renderCatalog();
   updateShopState();
-  showGoldToast(lang==='zh'?'已加入仓库':'Added to storage');
+  showGoldToast(t('nursery','addedToStorage'));
 }
 
 // ─── BREEDING ───
@@ -573,7 +572,7 @@ function selfPollinate(plotId, event) {
   const plot = plots.find(p => p.id === plotId);
   if (!plot || plot.state !== 'ready') return;
   if ((plot.selfBreedCount || 0) >= 1) {
-    showGoldToast(lang==='zh' ? '每株只能自交一次' : 'Self-pollination allowed once per plant');
+    showGoldToast(t('nursery','selfOnceOnly'));
     return;
   }
   breedA = plotId; breedB = plotId;
@@ -680,11 +679,11 @@ function renderBreedPredictions(gA, gB, cpA, fpA, cpB, fpB, isSelf) {
     finalPcts[remainders[k].i]++;
   }
 
-  let html = `<div class="breed-pred-title">${lang==='zh'?'后代预测':'Offspring Prediction'}</div>`;
+  let html = `<div class="breed-pred-title">${t('popup','prediction')}</div>`;
   html += `<div class="breed-pred-parents">
-    <span>${lang==='zh'?cpA.name+fpA.name:cpA.nameEn+' '+fpA.nameEn}</span>
+    <span>${colorName(cpA.name)+' '+flowerName(fpA.name)}</span>
     <span class="breed-pred-arrow">×</span>
-    <span>${isSelf?(lang==='zh'?'（自身）':'Self'):(lang==='zh'?cpB.name+fpB.name:cpB.nameEn+' '+fpB.nameEn)}</span>
+    <span>${isSelf ? t('popup','predSelf') : (colorName(cpB.name)+' '+flowerName(fpB.name))}</span>
   </div>`;
   html += `<div class="breed-pred-list">`;
 
@@ -695,7 +694,7 @@ function renderBreedPredictions(gA, gB, cpA, fpA, cpB, fpB, isSelf) {
     const isKnown = discovered.has(discKey);
     const barColor = isKnown ? e.colorP.hex : '#666';
     const name = isKnown
-      ? (lang==='zh' ? e.flowerP.name+'×'+e.colorP.name : e.colorP.nameEn+' '+e.flowerP.nameEn)
+      ? (colorName(e.colorP.name) + ' ' + flowerName(e.flowerP.name))
       : '？？？';
     const flowerIcon = isKnown
       ? flowerSVG(flowerSvgKey(e.flowerP), e.colorP.hex, 28)
@@ -713,7 +712,7 @@ function renderBreedPredictions(gA, gB, cpA, fpA, cpB, fpB, isSelf) {
     html += `<div class="breed-pred-row breed-pred-unknown">
       <div class="breed-pred-unk-icon">？</div>
       <div class="breed-pred-bar-wrap"><div class="breed-pred-bar" style="width:${otherPct}%;background:#888;opacity:.5;"></div></div>
-      <div class="breed-pred-label">${lang==='zh'?'其他':'Other'}</div>
+      <div class="breed-pred-label">${t('popup','predOther')}</div>
       ${showProbs ? `<div class="breed-pred-pct">${otherPct}%</div>` : ''}
     </div>`;
   }
@@ -733,36 +732,33 @@ function openBreedPopup() {
   const cpB = colorPhenotype(pB.flower), fpB = flowerPhenotype(pB.flower);
 
   document.getElementById('popup-title').textContent = isSelf
-    ? (lang==='zh'?'确认自授粉':'Confirm Self-Pollination')
-    : (lang==='zh'?'确认配种':'Confirm Breeding');
+    ? t('popup','confirmSelf')
+    : t('popup','confirmBreed');
 
   document.getElementById('popup-parents').innerHTML = isSelf ? `
     <div class="popup-parent">
       <div class="popup-flower-dot">${flowerSVG(flowerSvgKey(fpA), cpA.hex, 44)}</div>
-      <div class="popup-parent-name">${lang==='zh'?cpA.name:cpA.nameEn} ${lang==='zh'?fpA.name:fpA.nameEn}</div>
+      <div class="popup-parent-name">${colorName(cpA.name)} ${flowerName(fpA.name)}</div>
     </div>
     <div class="popup-cross">×</div>
     <div class="popup-parent">
       <div class="popup-flower-dot">${flowerSVG(flowerSvgKey(fpA), cpA.hex, 44)}</div>
-      <div class="popup-parent-name">${lang==='zh'?'（自身）':'(Self)'}</div>
+      <div class="popup-parent-name">${t('popup','selfLabel')}</div>
     </div>` : `
     <div class="popup-parent">
       <div class="popup-flower-dot">${flowerSVG(flowerSvgKey(fpA), cpA.hex, 44)}</div>
-      <div class="popup-parent-name">${lang==='zh'?cpA.name:cpA.nameEn} ${lang==='zh'?fpA.name:fpA.nameEn}</div>
+      <div class="popup-parent-name">${colorName(cpA.name)} ${flowerName(fpA.name)}</div>
     </div>
     <div class="popup-cross">×</div>
     <div class="popup-parent">
       <div class="popup-flower-dot">${flowerSVG(flowerSvgKey(fpB), cpB.hex, 44)}</div>
-      <div class="popup-parent-name">${lang==='zh'?cpB.name:cpB.nameEn} ${lang==='zh'?fpB.name:fpB.nameEn}</div>
+      <div class="popup-parent-name">${colorName(cpB.name)} ${flowerName(fpB.name)}</div>
     </div>`;
 
   const count = 3 + Math.floor(Math.random() * 3); // 3-5, lock it for display
-  document.getElementById('popup-body').textContent = lang==='zh'
-    ? `将产生 3–5 颗种子加入种子栏。配种次数 +1（每株最多 3 次）。`
-    : `Will produce 3–5 seeds. Breed count +1 (max 3 per plant).`;
-
-  document.getElementById('popup-confirm-btn').textContent = lang==='zh'?'配种':'Breed';
-  document.getElementById('popup-cancel-btn').textContent  = lang==='zh'?'取消':'Cancel';
+  document.getElementById('popup-body').textContent = t('popup','bodyText');
+  document.getElementById('popup-confirm-btn').textContent = t('popup','breed');
+  document.getElementById('popup-cancel-btn').textContent  = t('popup','cancel');
   document.getElementById('breed-popup').dataset.pendingCount = count;
   document.getElementById('breed-popup').classList.add('open');
   renderBreedPredictions(pA.flower, pB.flower, cpA, fpA, cpB, fpB, isSelf);
@@ -782,12 +778,8 @@ function confirmBreed() {
   const isSelf = breedA === breedB;
   const count = parseInt(document.getElementById('breed-popup').dataset.pendingCount) || 3;
 
-  const nameA = lang==='zh'
-    ? colorPhenotype(pA.flower).name + flowerPhenotype(pA.flower).name
-    : colorPhenotype(pA.flower).nameEn + ' ' + flowerPhenotype(pA.flower).nameEn;
-  const nameB = isSelf ? (lang==='zh'?'（自身）':'Self') : (lang==='zh'
-    ? colorPhenotype(pB.flower).name + flowerPhenotype(pB.flower).name
-    : colorPhenotype(pB.flower).nameEn + ' ' + flowerPhenotype(pB.flower).nameEn);
+  const nameA = colorName(colorPhenotype(pA.flower).name) + ' ' + flowerName(flowerPhenotype(pA.flower).name);
+  const nameB = isSelf ? t('popup','selfLabel') : (colorName(colorPhenotype(pB.flower).name) + ' ' + flowerName(flowerPhenotype(pB.flower).name));
 
   for (let i = 0; i < count; i++) {
     const geno = rollOffspringGeno(pA.flower, pB.flower);
@@ -820,12 +812,12 @@ function showSeedTooltip(event, group) {
   const tt = document.getElementById('tooltip');
   const seed0 = group.seeds[0];
   const fromLine = seed0.source
-    ? `${lang==='zh'?'来源':'Source'}: ${seed0.source}`
-    : `${lang==='zh'?'来自':'From'}: ${seed0.parentAName} × ${seed0.parentBName}`;
+    ? `${t('misc','source')}: ${seed0.source}`
+    : `${t('misc','from')}: ${seed0.parentAName} × ${seed0.parentBName}`;
   document.getElementById('tooltip-content').innerHTML =
     `<div>${fromLine}</div>
-     <div class="tooltip-line">${lang==='zh'?'数量':'Count'}: ${group.seeds.length}</div>
-     <div class="tooltip-line" style="font-style:italic;margin-top:2px;">${lang==='zh'?'种出来才知道什么花':'Unknown until grown'}</div>`;
+     <div class="tooltip-line">${t('misc','count')}: ${group.seeds.length}</div>
+     <div class="tooltip-line" style="font-style:italic;margin-top:2px;">${t('misc','unknownUntilGrown')}</div>`;
   tt.classList.add('show');
   moveTt(event);
 }
@@ -854,10 +846,8 @@ function showGoldToast(msg) {
 // ═══════════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════════
-const TAB_LABELS = {shop:{zh:'商店',en:'Shop'},nursery:{zh:'苗圃',en:'Nursery'},storage:{zh:'仓库',en:'Storage'},catalog:{zh:'图鉴',en:'Catalog'},hints:{zh:'提示',en:'Hints'}};
-
 function switchTab(tabId, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(bt => bt.classList.remove('active'));
   el.classList.add('active');
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + tabId).classList.add('active');
@@ -865,22 +855,8 @@ function switchTab(tabId, el) {
   if (tabId === 'hints') renderHints();
 }
 
-// ═══════════════════════════════════════════════════
-// SETTINGS
-// ═══════════════════════════════════════════════════
-const I18N = {
-  zh:{
-    'seed-bar-title':'种子栏','settings':'设置','lang':'语言','difficulty':'难度','ref':'参考',
-    'diff-easy':'初学者 — 显示基因型与概率','diff-learner':'进阶 — 显示基因型','diff-expert':'专家 — 纯观察',
-    'encyc':'遗传学百科','gold-unit':'金币',
-  },
-  en:{
-    'seed-bar-title':'Seed Tray','settings':'Settings','lang':'Language','difficulty':'Difficulty','ref':'Reference',
-    'diff-easy':'Easy — show genotype & odds','diff-learner':'Learner — show genotype','diff-expert':'Expert — observe only',
-    'encyc':'Genetics Encyclopedia','gold-unit':'G',
-  }
-};
-function tr(k){ return I18N[lang][k]||k; }
+// tr() wraps lang.js t() for legacy call sites
+function tr(k){ return (typeof t === 'function') ? t('ui', k) : k; }
 
 function applyLang() {
   const se = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
@@ -893,50 +869,35 @@ function applyLang() {
   se('diff-learner-label',   tr('diff-learner'));
   se('diff-expert-label',    tr('diff-expert'));
   se('encyc-label',          tr('encyc'));
+
   // Shop labels
-  const shopTr = {
-    zh:{ upgrades:'升级', boxes:'盲盒', nurseryName:'苗圃加速', nurseryDesc:'生长时间减半',
-         bronzeName:'初级盲盒', silverName:'中级盲盒', goldName:'高级盲盒',
-         bronzeDesc:'开局即可购买，基础遗传探索', silverDesc:'稀有隐性组合，繁育潜力强', goldDesc:'顶级隐性基因，传说级繁育基础',
-         silverLock:'解锁20种花后开放', goldLock:'解锁50种花后开放',
-         buy:'购买' },
-    en:{ upgrades:'Upgrades', boxes:'Blind Boxes', nurseryName:'Nursery Speed', nurseryDesc:'Halve all grow times',
-         bronzeName:'Basic Box', silverName:'Mid Box', goldName:'Advanced Box',
-         bronzeDesc:'Available from the start, basic genetics', silverDesc:'Rare recessives, strong breeding potential', goldDesc:'Top-tier recessives, legendary breeding',
-         silverLock:'Unlock 20 flower types first', goldLock:'Unlock 50 flower types first',
-         buy:'Buy' },
-  };
-  const s = shopTr[lang];
-  se('shop-upgrades-label', s.upgrades); se('shop-boxes-label', s.boxes);
-  se('upgrade-nursery-name', s.nurseryName); se('upgrade-nursery-desc', s.nurseryDesc);
-  se('box-bronze-name', s.bronzeName); se('box-silver-name', s.silverName); se('box-gold-name', s.goldName);
-  se('box-bronze-desc', s.bronzeDesc); se('box-silver-desc', s.silverDesc); se('box-gold-desc', s.goldDesc);
-  se('box-silver-lock', s.silverLock); se('box-gold-lock', s.goldLock);
-  ['bronze','silver','gold'].forEach(t => se('box-'+t+'-btn-label', s.buy));
+  se('shop-upgrades-label',   t('shop','upgrades'));
+  se('shop-boxes-label',      t('shop','boxes'));
+  se('upgrade-nursery-name',  t('shop','nurseryName'));
+  se('upgrade-nursery-desc',  t('shop','nurseryDesc'));
+  se('box-bronze-name',       t('shop','bronzeName'));
+  se('box-silver-name',       t('shop','silverName'));
+  se('box-gold-name',         t('shop','goldName'));
+  se('box-bronze-desc',       t('shop','bronzeDesc'));
+  se('box-silver-desc',       t('shop','silverDesc'));
+  se('box-gold-desc',         t('shop','goldDesc'));
+  se('box-silver-lock',       t('shop','silverLock'));
+  se('box-gold-lock',         t('shop','goldLock'));
+  ['bronze','silver','gold'].forEach(tier => se('box-'+tier+'-btn-label', t('shop','buy')));
+
   // Odds labels
-  const oddsZh = {
-    'bronze-odds-1':'1-2个隐性等位基因 80%','bronze-odds-2':'3个隐性等位基因 20%',
-    'silver-odds-1':'3个隐性等位基因 70%','silver-odds-2':'4个隐性等位基因 25%','silver-odds-3':'5个隐性等位基因 5%',
-    'gold-odds-1':'5个隐性等位基因 60%','gold-odds-2':'6-7个隐性等位基因 35%','gold-odds-3':'8个隐性等位基因 5%',
-  };
-  const oddsEn = {
-    'bronze-odds-1':'1-2 rec. alleles 80%','bronze-odds-2':'3 rec. alleles 20%',
-    'silver-odds-1':'3 rec. alleles 70%','silver-odds-2':'4 rec. alleles 25%','silver-odds-3':'5 rec. alleles 5%',
-    'gold-odds-1':'5 rec. alleles 60%','gold-odds-2':'6-7 rec. alleles 35%','gold-odds-3':'8 rec. alleles 5%',
-  };
-  const oddsMap = lang==='zh' ? oddsZh : oddsEn;
-  Object.entries(oddsMap).forEach(([id,txt]) => se(id,txt));
-  // Badge labels
-  const badgeZh = {bronze:'初级',silver:'中级',gold:'高级'};
-  const badgeEn = {bronze:'Basic',silver:'Mid',gold:'Adv.'};
-  const badgeMap = lang==='zh' ? badgeZh : badgeEn;
-  Object.entries(badgeMap).forEach(([t,txt]) => se('box-'+t+'-badge',txt));
-  document.querySelectorAll('.tab').forEach(t => { t.textContent = TAB_LABELS[t.dataset.tab][lang]; });
-  const tlb = document.getElementById('topbar-lang-btn');
-  if (tlb) tlb.textContent = getLangBtnLabel();
-  document.querySelectorAll('.lang-opt').forEach(b => {
-    b.classList.toggle('active', (lang==='zh' && b.textContent==='中文') || (lang==='en' && b.textContent==='English'));
+  ['bronze-odds-1','bronze-odds-2','silver-odds-1','silver-odds-2','silver-odds-3',
+   'gold-odds-1','gold-odds-2','gold-odds-3'].forEach(id => se(id, t('odds', id)));
+
+  // Tab labels
+  document.querySelectorAll('.tab').forEach(btn => {
+    const tabId = btn.dataset.tab;
+    if (tabId) btn.textContent = t('tabs', tabId);
   });
+
+  // Lang bars (home + topbar inline switcher)
+  if (typeof renderLangPicker === 'function') renderLangPicker();
+
   renderAll();
   renderStorage();
   renderCatalog();
@@ -944,32 +905,49 @@ function applyLang() {
   updateShopState();
 }
 
-function setLang(l) { lang = l; applyLang(); }
+function setLang(l) {
+  lang = l;
+  applyLang();
+  applyHomeLang();
+}
 
+// toggleLang now cycles through all supported languages in order
 function toggleLang() {
-  lang = lang === 'zh' ? 'en' : 'zh';
+  const codes = (typeof LANG_META !== 'undefined')
+    ? LANG_META.map(m => m.code)
+    : ['zh','tw','en','ru','pt','de','fr','es','ja','ko'];
+  const idx = codes.indexOf(lang);
+  lang = codes[(idx + 1) % codes.length];
   applyLang();
   applyHomeLang();
 }
 
 function getLangBtnLabel() {
-  // Always show the OTHER language so user knows what clicking does
-  // Written in both scripts so either user recognises it
-  return lang === 'zh' ? 'EN / English' : '中文';
+  // Show current language native name (abbreviated)
+  if (typeof LANG_META !== 'undefined') {
+    const meta = LANG_META.find(m => m.code === lang);
+    return meta ? meta.nativeName : lang.toUpperCase();
+  }
+  return lang.toUpperCase();
 }
 
+// saveGame: uses localStorage (for packaged app / Electron / WebView)
+// lang.js provides saveGame() and loadGame(), so we delegate to it.
+// This stub stays for the save button in index.html which calls saveGame().
 function saveGame() {
+  if (typeof window._saveGame === 'function') { window._saveGame(); return; }
+  // Fallback: inline localStorage save
   try {
-    const state = { lang, difficulty, gold, seeds, plots, storageItems, discovered: [...discovered], nurseryUpgraded, unlockedHints };
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'mendel_save.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showGoldToast(lang==='zh' ? '存档已下载 ✓' : 'Save downloaded ✓');
-  } catch(e) { showGoldToast(lang==='zh' ? '保存失败' : 'Save failed'); }
+    const SAVE_KEY = 'mendel_save';
+    const state = {
+      version: 2, lang, difficulty, gold, seeds, plots,
+      storageItems, discovered: [...discovered], nurseryUpgraded, unlockedHints
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    showGoldToast(t('misc','saveOk'));
+  } catch(e) {
+    showGoldToast(t('misc','saveFail'));
+  }
 }
 
 function setDiff(d, el) {
@@ -981,7 +959,7 @@ function setDiff(d, el) {
 
 function openSettings() { document.getElementById('settings-overlay').classList.add('open'); }
 function closeSettings() { document.getElementById('settings-overlay').classList.remove('open'); }
-function openEncyclopedia() { alert(lang==='zh'?'遗传学百科（待实现）':'Encyclopedia — coming soon'); }
+function openEncyclopedia() { alert(tr('encyc') + ' — coming soon'); }
 
 // ═══════════════════════════════════════════════════
 // SHOP
@@ -1027,7 +1005,7 @@ function updateShopState() {
   if (nurseryUpgraded) {
     upBtn.disabled = true;
     upName.classList.add('done');
-    upBtn.innerHTML = `<span>${lang==='zh'?'已升级':'Upgraded'}</span>`;
+    upBtn.innerHTML = `<span>${t('shop','upgraded')}</span>`;
   } else {
     upBtn.disabled = gold < 2500;
   }
@@ -1041,7 +1019,7 @@ function buyUpgrade(type) {
     updateGoldDisplay();
     updateShopState();
     if (typeof SFX !== 'undefined') SFX.coin();
-    showGoldToast(lang==='zh'?'苗圃已升级！生长时间减半':'Nursery upgraded! Growth time halved.');
+    showGoldToast(t('shop','upgradeSuccess'));
   }
 }
 
@@ -1056,7 +1034,7 @@ function buyBox(tier) {
   renderSeedBar();
   updateShopState();
   if (typeof SFX !== 'undefined') SFX.coin();
-  showGoldToast(lang==='zh' ? `已获得 1 颗种子` : `1 seed added to tray`);
+  showGoldToast(t('shop','seedAdded'));
 }
 
 function rollBoxSeed(tier) {
@@ -1117,12 +1095,8 @@ function rollByRecCount(recAlleles) {
 function pickFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function boxName(tier) {
-  const n = {
-    bronze:{zh:'初级盲盒',en:'Basic Box'},
-    silver:{zh:'中级盲盒',en:'Mid Box'},
-    gold:  {zh:'高级盲盒',en:'Advanced Box'}
-  };
-  return n[tier][lang];
+  const map = { bronze:'boxBasic', silver:'boxMid', gold:'boxAdv' };
+  return t('shop', map[tier] || 'boxBasic');
 }
 
 // Helpers for genotype construction
@@ -1149,7 +1123,7 @@ function checkPlotUnlock() {
   while (plots.length < shouldHave) {
     plots.push(makePlot());
     var n = plots.length;
-    showGoldToast(lang === 'zh' ? '苗圃新田块已解锁！（' + n + '/12）' : 'New plot unlocked! (' + n + '/12)');
+    showGoldToast(t('nursery','plotUnlocked') + '（' + n + '/12）');
   }
 }
 
@@ -1157,14 +1131,17 @@ function checkPlotUnlock() {
 // ═══════════════════════════════════════════════════
 // HINTS SYSTEM
 // ═══════════════════════════════════════════════════
-const HINTS = [
-  { zh: '基因ABC控制的是花的颜色', en: 'Genes ABC control flower color' },
-  { zh: '基因DE控制的是花瓣的数量', en: 'Genes DE control petal count' },
-  { zh: '基因A控制红色', en: 'Gene A controls red color' },
-  { zh: '基因B控制黄色', en: 'Gene B controls yellow color' },
-  { zh: '基因C控制蓝色', en: 'Gene C controls blue color' },
-  { zh: '基因T控制瓣尖的形状', en: 'Gene T controls petal tip shape' },
-];
+// HINTS use lang.js I18N_ALL.hintsContent for multi-lang text
+const HINTS = (typeof I18N_ALL !== 'undefined' && I18N_ALL.hintsContent)
+  ? I18N_ALL.hintsContent
+  : [
+      { zh:'基因ABC控制的是花的颜色', en:'Genes ABC control flower color' },
+      { zh:'基因DE控制的是花瓣的数量', en:'Genes DE control petal count' },
+      { zh:'基因A控制红色', en:'Gene A controls red color' },
+      { zh:'基因B控制黄色', en:'Gene B controls yellow color' },
+      { zh:'基因C控制蓝色', en:'Gene C controls blue color' },
+      { zh:'基因T控制瓣尖的形状', en:'Gene T controls petal tip shape' },
+    ];
 
 let unlockedHints = 0; // how many hints have been unlocked so far
 
@@ -1197,10 +1174,8 @@ function showHintToast(discCount, hint) {
     ].join(';');
     document.body.appendChild(t);
   }
-  const line1 = lang === 'zh'
-    ? '已解锁 ' + discCount + ' 种花，获得提示：'
-    : 'Unlocked ' + discCount + ' flower types — Hint:';
-  const line2 = lang === 'zh' ? hint.zh : hint.en;
+  const line1 = unlockedHints + ' ' + t('hints','hintFlowerTypes');
+  const line2 = h[lang] || h['en'] || h['zh'] || '';
   t.innerHTML = '<div style="font-size:11px;opacity:.7;margin-bottom:3px;">' + line1 + '</div><div>' + line2 + '</div>';
   t.style.opacity = '1';
   clearTimeout(hintToastTimer);
@@ -1212,16 +1187,15 @@ function renderHints() {
   if (!list) return;
   const totalLabel = document.getElementById('hints-total-label');
   if (totalLabel) {
-    totalLabel.textContent = lang === 'zh'
-      ? '已解锁 ' + unlockedHints + ' / ' + HINTS.length + ' 条提示'
-      : 'Hints unlocked: ' + unlockedHints + ' / ' + HINTS.length;
+    totalLabel.textContent = `${t('hints','unlocked')} ${unlockedHints} / ${HINTS.length}`;
   }
   if (unlockedHints === 0) {
-    list.innerHTML = '<div class="hint-empty">' + (lang === 'zh' ? '每解锁5种花获得一条提示' : 'Unlock a hint every 5 flower types discovered') + '</div>';
+    list.innerHTML = '<div class="hint-empty">' + t('hints','every5') + '</div>';
     return;
   }
   list.innerHTML = HINTS.slice(0, unlockedHints).map(function(h, i) {
-    return '<div class="hint-row"><span class="hint-num">' + (i+1) + '</span><span class="hint-text">' + (lang === 'zh' ? h.zh : h.en) + '</span></div>';
+    const text = h[lang] || h['en'] || h['zh'] || '';
+    return '<div class="hint-row"><span class="hint-num">' + (i+1) + '</span><span class="hint-text">' + text + '</span></div>';
   }).join('');
 }
 
@@ -1234,16 +1208,13 @@ function showBoxOpen(seed) {
 
   document.getElementById('box-open-dot').style.background = cp.hex;
   document.getElementById('box-open-name').textContent =
-    (lang==='zh' ? cp.name + fp.name : cp.nameEn + ' ' + fp.nameEn);
-  document.getElementById('box-open-rarity').textContent = rarityLabel(rar, lang);
+    colorName(cp.name) + ' ' + flowerName(fp.name);
+  document.getElementById('box-open-rarity').textContent = rarityLabel(rar);
   document.getElementById('box-open-rarity').style.color = rarCol;
   document.getElementById('box-open-geno').textContent = showGeno ? genoStr(seed.geno) : '';
   document.getElementById('box-open-desc').textContent =
-    lang==='zh'
-      ? `售价：${sellValue(cp,fp)}  |  生长：${growTime(cp,fp)}s`
-      : `Sell: ${sellValue(cp,fp)}  |  Grow: ${growTime(cp,fp)}s`;
-  document.getElementById('box-open-close-btn').textContent =
-    lang==='zh' ? '种子已入种子栏' : 'Seed added to tray';
+    `${t('misc','value')}: ${sellValue(cp,fp)}  |  Grow: ${growTime(cp,fp)}s`;
+  document.getElementById('box-open-close-btn').textContent = t('shop','seedAdded');
 
   // shimmer color by rarity
   const shimmerCol = {common:'#ffffff06',rare:'#6a9fd820',epic:'#a06abf20',legend:'#c8973a20'}[rar];
@@ -1293,7 +1264,7 @@ function renderStorage() {
     return overallRarity(item.cp, item.fp) === storageFilter;
   });
 
-  countLabel.textContent = `${nonFavItems.length} ${lang==='zh'?'株':'flowers'}`;
+  countLabel.textContent = `${nonFavItems.length} ${t('storage','flowers')}`;
   sellAllBtn.disabled = nonFavItems.length === 0;
 
   if (nonFavItems.length === 0) {
@@ -1313,17 +1284,15 @@ function makeFlowerCardHTML(item) {
   const val = sellValue(item.cp, item.fp);
   const genoLine = showGeno ? `<div class="fc-geno">${genoStr(item.geno)}</div>` : '';
   const favActive = item.favorite ? 'active' : '';
-  const flowerName = lang==='zh'
-    ? item.cp.name + item.fp.name
-    : item.cp.nameEn + ' ' + item.fp.nameEn;
+  const flowerName_ = colorName(item.cp.name) + ' ' + flowerName(item.fp.name);
   return `<div class="flower-card${item.favorite?' fav':''}" id="fc-${item.id}">
     <div class="fc-dot">${flowerSVG(flowerSvgKey(item.fp), item.cp.hex, 52)}</div>
-    <div class="fc-name">${flowerName}</div>
+    <div class="fc-name">${flowerName_}</div>
     ${genoLine}
     <div class="fc-value"><span class="shop-coin"></span>${val}</div>
     <div class="fc-actions">
-      <button class="fc-btn sell" onclick="sellFromStorage(${item.id})">${lang==='zh'?'出售':'Sell'}</button>
-      <button class="fc-btn fav-btn ${favActive}" onclick="toggleFav(${item.id})">${lang==='zh'?'收藏':'Fav'}</button>
+      <button class="fc-btn sell" onclick="sellFromStorage(${item.id})">${t('storage','sell')}</button>
+      <button class="fc-btn fav-btn ${favActive}" onclick="toggleFav(${item.id})">${t('storage','fav')}</button>
     </div>
   </div>`;
 }
@@ -1335,16 +1304,12 @@ function renderFavStrip() {
     favItems.length > 0 ? `${favItems.length}` : '';
 
   if (favItems.length === 0) {
-    scroll.innerHTML = `<span class="fav-empty" id="fav-empty-label">${lang==='zh'?'暂无收藏':'No favorites yet'}</span>`;
+    scroll.innerHTML = `<span class="fav-empty" id="fav-empty-label">${t('storage','noFavorites')}</span>`;
     return;
   }
   scroll.innerHTML = favItems.map(item => {
-    const name = lang==='zh' ? item.cp.name+item.fp.name : item.cp.nameEn+' '+item.fp.nameEn;
-    const tip = lang==='zh' ? '点击返回仓库' : 'Tap to unpin';
-    return `<div class="fav-chip" onclick="toggleFav(${item.id})" title="${tip}" style="cursor:pointer;">
+    return `<div class="fav-chip" onclick="toggleFav(${item.id})" style="cursor:pointer;">
       <div class="fav-chip-dot">${flowerSVG(flowerSvgKey(item.fp), item.cp.hex, 38)}</div>
-      <div class="fav-chip-name">${name}</div>
-      <div style="font-size:9px;color:var(--muted);margin-top:1px;opacity:.7;">${tip}</div>
     </div>`;
   }).join('');
 }
@@ -1390,15 +1355,15 @@ function rarityHex(r) {
 
 function updateStorageLang() {
   const se = (id,txt) => { const el=document.getElementById(id); if(el) el.textContent=txt; };
-  se('filter-all',   lang==='zh'?'全部':'All');
-  se('filter-common',lang==='zh'?'普通':'Common');
-  se('filter-rare',  lang==='zh'?'稀有':'Rare');
-  se('filter-epic',  lang==='zh'?'史诗':'Epic');
-  se('filter-legend',lang==='zh'?'传说':'Legend');
-  se('storage-sell-all-btn', lang==='zh'?'全部出售':'Sell All');
-  se('fav-title-label', lang==='zh'?'收藏':'Favorites');
-  se('storage-empty-label', lang==='zh'?'仓库空空如也':'Storage is empty');
-  se('storage-empty-sub', lang==='zh'?'收获苗圃中的花卉加入仓库':'Harvest flowers from the nursery');
+  se('filter-all',    t('storage','filterAll'));
+  se('filter-common', t('storage','filterCommon'));
+  se('filter-rare',   t('storage','filterRare'));
+  se('filter-epic',   t('storage','filterEpic'));
+  se('filter-legend', t('storage','filterLegend'));
+  se('storage-sell-all-btn', t('storage','sellAll'));
+  se('fav-title-label',      t('storage','favorites'));
+  se('storage-empty-label',  t('storage','emptyMain'));
+  se('storage-empty-sub',    t('storage','emptySub'));
 }
 
 // ═══════════════════════════════════════════════════
@@ -1423,7 +1388,7 @@ const CAT_FLOWERS = [
   // 传说 coef:75
   { key:'铁线莲', keyEn:'Clematis',     svgKey:'铁线莲', coef:75, hex:'#303050' },
   { key:'虞美人', keyEn:'Poppy',        svgKey:'罂粟',   coef:75, hex:'#5a2020' },
-  { key:'冰晶花', keyEn:'Ice Crystal',  svgKey:'水仙',   coef:75, hex:'#304060' },
+  { key:'水仙',   keyEn:'Daffodil',      svgKey:'水仙',   coef:75, hex:'#304060' },
 ];
 
 const CAT_COLORS = [
@@ -1447,16 +1412,24 @@ function renderCatalog() {
   const total = CAT_FLOWERS.length * CAT_COLORS.length;
   const found = discovered.size;
   document.getElementById('catalog-discovered-label').textContent =
-    lang === 'zh'
-      ? `已发现 ${found} / ${total} 种`
-      : `Discovered ${found} / ${total}`;
+    `${t('catalog','discovered')} ${found} / ${total} ${t('catalog','species')}`;
+  // unlock hint — inject span next to label if not already present
+  let hintEl = document.getElementById('catalog-unlock-hint');
+  if (!hintEl) {
+    const labelEl = document.getElementById('catalog-discovered-label');
+    if (labelEl && labelEl.parentNode) {
+      hintEl = document.createElement('span');
+      hintEl.id = 'catalog-unlock-hint';
+      hintEl.style.cssText = 'margin-left:10px;font-size:14px;color:var(--muted);';
+      labelEl.parentNode.insertBefore(hintEl, labelEl.nextSibling);
+    }
+  }
+  if (hintEl) hintEl.textContent = t('catalog','unlockHint');
 
-  // Grid: (rows = flowers + 1 header) × (cols = colors + 1 header)
-  const nCols = CAT_COLORS.length + 1;
-  const nRows = CAT_FLOWERS.length + 1;
+  // Grid: row-header + color cols + wiki col
   const table = document.getElementById('catalog-table');
-  table.style.gridTemplateColumns = `80px repeat(${CAT_COLORS.length}, 84px)`;
-  table.style.gridTemplateRows    = `40px repeat(${CAT_FLOWERS.length}, 84px)`;
+  table.style.gridTemplateColumns = `100px repeat(${CAT_COLORS.length}, 104px) 400px`;
+  table.style.gridTemplateRows    = `44px repeat(${CAT_FLOWERS.length}, 104px)`;
 
   let html = '';
 
@@ -1465,50 +1438,131 @@ function renderCatalog() {
 
   // Column headers (colors)
   CAT_COLORS.forEach((col, ci) => {
-    const sepClass = COLOR_TIER_SEP.includes(ci) ? ' style="border-left:1px solid var(--border2);padding-left:8px;"' : '';
-    html += `<div class="cat-col-header"${sepClass}>
+    const sepStyle = COLOR_TIER_SEP.includes(ci) ? 'border-left:1px solid var(--border2);padding-left:8px;' : '';
+    html += `<div class="cat-col-header" style="${sepStyle}">
       <div class="cat-col-dot" style="background:${col.hex};border-radius:50%;width:12px;height:12px;"></div>
-      <span>${lang==='zh' ? col.key : col.keyEn}</span>
+      <span>${colorName(col.key)}</span>
     </div>`;
   });
+
+  // Wiki column header
+  html += `<div class="cat-col-header cat-wiki-header" style="border-left:2px solid var(--border2);padding-left:12px;font-style:italic;opacity:0.7;">
+    ${t('catalog','wikiCol')}
+  </div>`;
 
   // Rows
   CAT_FLOWERS.forEach((fl, ri) => {
     const rowSep = FLOWER_TIER_SEP.includes(ri) ? 'border-top:1px solid var(--border2);' : '';
-    // Row header
-    html += `<div class="cat-row-header" style="${rowSep}">${lang==='zh' ? fl.key : fl.keyEn}</div>`;
+    const rowId  = `cat-row-${ri}`;
 
-    // Cells
-    // 【图鉴全开开关】将下方 CATALOG_SHOW_ALL 改为 false 可恢复正常（只显示已发现的花）
+    // Row header
+    html += `<div class="cat-row-header" style="${rowSep}"
+      onmouseenter="highlightCatRow(${ri})"
+      onmouseleave="highlightCatRow(-1)">${flowerName(fl.key)}</div>`;
+
+    // Color cells
     const CATALOG_SHOW_ALL = false;
     CAT_COLORS.forEach((col, ci) => {
       const discKey = col.key + '|' + fl.key;
       const isFound = CATALOG_SHOW_ALL || discovered.has(discKey);
-      const colSep = COLOR_TIER_SEP.includes(ci) ? 'border-left:1px solid var(--border2);' : '';
-      const val = col.coef * fl.coef;
+      const colSep  = COLOR_TIER_SEP.includes(ci) ? 'border-left:1px solid var(--border2);' : '';
+      const val     = col.coef * fl.coef;
 
       if (isFound) {
-        const name = lang==='zh' ? col.key+fl.key : col.keyEn+' '+fl.keyEn;
-        html += `<div class="cat-cell discovered" style="${rowSep}${colSep}"
-          onmouseenter="showCatTooltip(event,'${name}',${val})"
-          onmouseleave="hideTooltip()">
-          ${flowerSVG(fl.svgKey||fl.key, col.hex, 48)}
+        const name = colorName(col.key) + ' ' + flowerName(fl.key);
+        html += `<div class="cat-cell discovered cat-row-cell-${ri}" style="${rowSep}${colSep}"
+          onmouseenter="showCatTooltip(event,'${name}',${val});highlightCatRow(${ri})"
+          onmouseleave="hideTooltip();highlightCatRow(-1)">
+          ${flowerSVG(fl.svgKey||fl.key, col.hex, 60)}
           <div class="cat-val"><div class="cat-val-coin"></div>${val}</div>
         </div>`;
       } else {
-        html += `<div class="cat-cell undiscovered" style="${rowSep}${colSep}"></div>`;
+        html += `<div class="cat-cell undiscovered cat-row-cell-${ri}" style="${rowSep}${colSep}"
+          onmouseenter="highlightCatRow(${ri})"
+          onmouseleave="highlightCatRow(-1)"></div>`;
       }
     });
+
+    // Wiki cell
+    const wikiDesc = getFlowerWiki(fl.key);
+    html += `<div class="cat-wiki-cell cat-row-cell-${ri}" style="${rowSep}border-left:2px solid var(--border2);"
+      onmouseenter="highlightCatRow(${ri})"
+      onmouseleave="highlightCatRow(-1)">
+      <div class="cat-wiki-text">${wikiDesc}</div>
+    </div>`;
   });
 
   table.innerHTML = html;
+
+  // Inject wiki column styles if not already present
+  if (!document.getElementById('cat-wiki-styles')) {
+    const style = document.createElement('style');
+    style.id = 'cat-wiki-styles';
+    style.textContent = `
+      .cat-wiki-cell {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        box-sizing: border-box;
+        transition: background 0.15s;
+      }
+      .cat-wiki-text {
+      font-family: Georgia, 'Noto Serif', serif;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--muted);
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 6;
+        -webkit-box-orient: vertical;
+        transition: color 0.15s;
+      }
+      .cat-wiki-header {
+        align-items: center;
+        font-size: 15px;
+      }
+      .cat-row-highlighted .cat-wiki-text {
+        color: var(--text);
+      }
+      .cat-row-highlighted.cat-wiki-cell,
+      .cat-row-highlighted.cat-cell,
+      .cat-row-highlighted.cat-row-header {
+        background: var(--hover, rgba(255,255,255,0.05));
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
 
 function showCatTooltip(event, name, val) {
   document.getElementById('tooltip-content').innerHTML =
     `<div>${name}</div>
-     <div class="tooltip-line">${lang==='zh'?'售价':'Value'}: ${val}</div>`;
+     <div class="tooltip-line">${t('catalog','value')}: ${val}</div>`;
   document.getElementById('tooltip').classList.add('show');
+}
+
+// Look up wiki description for a flower key in current lang
+function getFlowerWiki(flKey) {
+  if (typeof I18N_ALL === 'undefined' || !I18N_ALL.flowerWiki) return '';
+  const entry = I18N_ALL.flowerWiki[flKey];
+  if (!entry) return '';
+  return entry[lang] || entry['en'] || '';
+}
+
+// Highlight all cells in a catalog row (rowIdx -1 = clear)
+let _catHighlightRow = -1;
+function highlightCatRow(ri) {
+  if (_catHighlightRow !== -1) {
+    document.querySelectorAll(`.cat-row-cell-${_catHighlightRow}`).forEach(el => el.classList.remove('cat-row-highlighted'));
+    const rh = document.querySelectorAll('.cat-row-header');
+    if (rh[_catHighlightRow]) rh[_catHighlightRow].classList.remove('cat-row-highlighted');
+  }
+  _catHighlightRow = ri;
+  if (ri !== -1) {
+    document.querySelectorAll(`.cat-row-cell-${ri}`).forEach(el => el.classList.add('cat-row-highlighted'));
+    const rh = document.querySelectorAll('.cat-row-header');
+    if (rh[ri]) rh[ri].classList.add('cat-row-highlighted');
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1536,26 +1590,20 @@ function renderHomeFlowers() {
 }
 
 function toggleHomeLang() {
-  homeLang = homeLang === 'zh' ? 'en' : 'zh';
-  lang = homeLang;
+  const codes = (typeof LANG_META !== 'undefined')
+    ? LANG_META.map(m => m.code)
+    : ['zh','tw','en','ru','pt','de','fr','es','ja','ko'];
+  const idx = codes.indexOf(lang);
+  lang = codes[(idx + 1) % codes.length];
   applyHomeLang();
 }
 
 function applyHomeLang() {
-  const isZh = lang === 'zh';
-  document.getElementById('home-lang-label').textContent = isZh ? '中文 ↔ EN' : 'EN ↔ 中文';
-  // Update button text based on current lang
   const startBtn = document.getElementById('home-start-btn');
   const contBtn  = document.getElementById('home-continue-btn');
-  if (startBtn) startBtn.textContent = isZh ? '开始游戏' : 'New Game';
-  if (contBtn)  contBtn.textContent  = isZh ? '继续游戏' : 'Continue';
-  // sync settings lang buttons
-  document.querySelectorAll('.lang-opt').forEach(b => {
-    b.classList.toggle('active', (lang==='zh' && b.textContent==='中文') || (lang==='en' && b.textContent==='English'));
-  });
-  // sync topbar lang button
-  const tlb = document.getElementById('topbar-lang-btn');
-  if (tlb) tlb.textContent = getLangBtnLabel();
+  if (startBtn) startBtn.textContent = t('home','newGame');
+  if (contBtn)  contBtn.textContent  = t('home','continue');
+  if (typeof renderLangPicker === 'function') renderLangPicker();
 }
 
 function homeStart() {
@@ -1567,41 +1615,58 @@ function homeStart() {
 }
 
 function homeContinue() {
-  // Trigger file picker to load a save JSON
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json,application/json';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const s = JSON.parse(ev.target.result);
-        if (s.lang) lang = s.lang;
-        if (s.difficulty) difficulty = s.difficulty;
-        if (typeof s.gold === 'number') gold = s.gold;
-        if (Array.isArray(s.seeds)) { seeds = s.seeds; nextSeedId = (seeds.reduce((m,x)=>Math.max(m,x.id||0),0))+1; }
-        if (Array.isArray(s.plots)) { plots = s.plots; nextPlotId = (plots.reduce((m,x)=>Math.max(m,x.id||0),0))+1; }
-        if (Array.isArray(s.storageItems)) { storageItems = s.storageItems; nextStorageId = (storageItems.reduce((m,x)=>Math.max(m,x.id||0),0))+1; }
-        if (Array.isArray(s.discovered)) s.discovered.forEach(k => discovered.add(k));
-        if (typeof s.nurseryUpgraded === 'boolean') nurseryUpgraded = s.nurseryUpgraded;
-        if (typeof s.unlockedHints === 'number') unlockedHints = s.unlockedHints;
-        gameStarted = true;
-        document.getElementById('home-overlay').classList.add('fade-out');
-        setTimeout(() => { document.getElementById('home-overlay').style.display = 'none'; }, 600);
-        renderAll(); startAllTimers(); updateShopState(); renderStorage(); renderCatalog(); renderHints(); applyLang();
-      } catch(err) {
-        alert(lang==='zh' ? '存档文件无效' : 'Invalid save file');
-      }
+  // Load from localStorage
+  const SAVE_KEY = 'mendel_save';
+  let json = null;
+  try { json = localStorage.getItem(SAVE_KEY); } catch(e) {}
+  if (!json) {
+    // Fallback: file picker for legacy JSON saves
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (!_applyLoadedSave(ev.target.result)) {
+          alert(t('misc','loadFail'));
+        }
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
-  };
-  input.click();
+    input.click();
+    return;
+  }
+  if (!_applyLoadedSave(json)) {
+    alert(t('misc','loadFail'));
+  }
+}
+
+function _applyLoadedSave(jsonString) {
+  try {
+    const s = JSON.parse(jsonString);
+    if (s.lang) lang = s.lang;
+    if (s.difficulty) difficulty = s.difficulty;
+    if (typeof s.gold === 'number') gold = s.gold;
+    if (Array.isArray(s.seeds)) { seeds = s.seeds; nextSeedId = (seeds.reduce((m,x)=>Math.max(m,x.id||0),0))+1; }
+    if (Array.isArray(s.plots)) { plots = s.plots; nextPlotId = (plots.reduce((m,x)=>Math.max(m,x.id||0),0))+1; }
+    if (Array.isArray(s.storageItems)) { storageItems = s.storageItems; nextStorageId = (storageItems.reduce((m,x)=>Math.max(m,x.id||0),0))+1; }
+    if (Array.isArray(s.discovered)) s.discovered.forEach(k => discovered.add(k));
+    if (typeof s.nurseryUpgraded === 'boolean') nurseryUpgraded = s.nurseryUpgraded;
+    if (typeof s.unlockedHints === 'number') unlockedHints = s.unlockedHints;
+    gameStarted = true;
+    document.getElementById('home-overlay').classList.add('fade-out');
+    setTimeout(() => { document.getElementById('home-overlay').style.display = 'none'; }, 600);
+    renderAll(); startAllTimers(); updateShopState(); renderStorage(); renderCatalog(); renderHints(); applyLang();
+    return true;
+  } catch(err) {
+    return false;
+  }
 }
 
 function checkHomeContinue() {
-  // Always show continue button — player picks their save file
+  // Show continue if localStorage has a save, otherwise still show it (user can use file fallback)
   document.getElementById('home-continue-btn').style.display = '';
 }
 

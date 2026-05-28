@@ -8,43 +8,36 @@
 <link rel="stylesheet" href="style.css">
 
 <style>
+/* ── Home screen language bar ── */
+.home-lang-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted, #888);
+  line-height: 1.8;
+}
+.home-lang-bar .lang-item {
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color .15s;
+  color: var(--muted, #888);
+  white-space: nowrap;
+}
+.home-lang-bar .lang-item:hover  { color: var(--gold2, #c8a84a); }
+.home-lang-bar .lang-item.active { color: var(--gold2, #c8a84a); font-weight: 600; }
+.home-lang-bar .lang-sep { color: var(--border, #444); user-select: none; padding: 2px 0; }
+
 /* ── Mobile topbar fix ── */
 @media (max-width: 600px) {
-  .topbar {
-    flex-wrap: nowrap;
-    overflow: hidden;
-    padding: 0 6px;
-    gap: 4px;
-  }
-  .tabs {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    display: flex;
-    flex-shrink: 1;
-  }
+  .topbar { flex-wrap: nowrap; overflow: hidden; padding: 0 6px; gap: 4px; }
+  .tabs { flex: 1 1 0; min-width: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; display: flex; flex-shrink: 1; }
   .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex: 0 0 auto;
-    padding: 6px 10px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-  .topbar-right {
-    flex: 0 0 auto;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .topbar-lang-btn {
-    font-size: 11px;
-    padding: 4px 6px;
-  }
-  .gold-display span {
-    font-size: 12px;
-  }
+  .tab { flex: 0 0 auto; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  .topbar-right { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; }
+  .gold-display span { font-size: 12px; }
 }
 </style>
 </head>
@@ -64,11 +57,9 @@
     <div class="home-actions">
       <button class="home-btn" id="home-start-btn" onclick="homeStart()">开始游戏</button>
       <button class="home-btn" id="home-continue-btn" onclick="homeContinue()">继续游戏</button>
-      <button class="home-lang-toggle" onclick="toggleHomeLang()">
-        <span id="home-lang-label">中文 ↔ EN</span>
-      </button>
+      <div class="home-lang-bar" id="home-lang-bar"></div>
     </div>
-    <div class="home-version">Demo v0.1 by 纯一星鸣</div>
+    <div class="home-version">v1.0 by Robut 纯一星鸣</div>
     <div class="home-version">QQ群：212272061</div>
   </div>
 </div>
@@ -94,7 +85,6 @@
         <rect x="5" y="11" width="10" height="6" rx=".5"/>
       </svg>
     </button>
-    <button class="topbar-icon-btn topbar-lang-btn" onclick="toggleLang()" id="topbar-lang-btn" title="Switch Language / 切换语言">EN / English</button>
   </div>
 </div>
 
@@ -276,6 +266,7 @@
 
 <script src="svg.js"></script>
 <script src="sound.js"></script>
+<script src="lang.js"></script>
 <script src="function.js"></script>
 
 </body>
